@@ -360,6 +360,8 @@ pub fn reset(self: *Self) void {
 }
 
 pub fn step(self: *Self) void {
+    const program_counter_before = self.registers.program_counter;
+
     std.debug.print("{x:0>4} ({x:0>2}): ", .{ self.registers.program_counter + 1, self.memory[self.registers.program_counter + 1 .. self.registers.program_counter + 4] });
     const instruction: Op = @enumFromInt(self.next_program_u8());
     std.debug.print("{}\n", .{instruction});
@@ -734,6 +736,10 @@ pub fn step(self: *Self) void {
             self.pop_flags();
             self.pop_program_counter();
         },
+    }
+
+    if (self.registers.program_counter == program_counter_before) {
+        std.debug.panic("Trap encountered at {x}\n", .{self.registers.program_counter});
     }
 }
 
