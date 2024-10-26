@@ -734,15 +734,20 @@ pub fn step(self: *Self) Op {
         .SEI => self.flags.interupt_disabled = true,
 
         .BRK => if (!self.flags.interupt_disabled) {
+            // Add two to get the correct offset of the return address on the stack
+            self.registers.program_counter += 2;
             self.push_program_counter();
             self.push_flags();
             self.flags.break_command = true;
-            self.registers.program_counter = self.fetch_u16(BRK_INTERUPT_HANDLER_ADDRESS);
+            self.flags.interupt_disabled = true;
+            self.registers.program_counter = self.fetch_u16(BRK_INTERUPT_HANDLER_ADDRESS) -% 1;
         },
         .NOP => {},
         .RTI => {
             self.pop_flags();
             self.pop_program_counter();
+            // Remove one so that the next step with increment to the specified address
+            self.registers.program_counter -= 1;
         },
     }
 
