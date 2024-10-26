@@ -498,21 +498,15 @@ pub fn step(self: *Self) Op {
                 .ADC_IDY => .IDY,
                 else => unreachable,
             });
-            const adding_carry_caused_carry = self.flags.carry and self.registers.accumulator == 0xFF;
+            const before = self.registers.accumulator;
             if (self.flags.carry) {
-                if (adding_carry_caused_carry) {
-                    self.registers.accumulator = 0;
-                } else {
-                    self.registers.accumulator += 1;
-                }
+                self.registers.accumulator +%= 1;
             }
-            const was_negative_before: bool = Flags.test_negative(self.registers.accumulator);
-            const result = @addWithOverflow(self.registers.accumulator, value);
-            self.load_accumulator(result[0]);
-            if (was_negative_before == self.flags.negative) {
+            self.load_accumulator(self.registers.accumulator +% value);
+            if (!Flags.test_negative(before) and self.flags.negative) {
                 self.flags.overflow = true;
             }
-            self.flags.carry = adding_carry_caused_carry or result[1] == 1;
+            self.flags.carry = self.registers.accumulator < before;
         },
 
         .SBC_IMM, .SBC_ZPG, .SBC_ZPX, .SBC_ABS, .SBC_ABX, .SBC_ABY, .SBC_IDX, .SBC_IDY => {
@@ -527,19 +521,15 @@ pub fn step(self: *Self) Op {
                 .SBC_IDY => .IDY,
                 else => unreachable,
             });
-            const subtracting_carry_caused_carry = self.registers.accumulator == 0;
-            if (subtracting_carry_caused_carry) {
-                self.registers.accumulator = 255;
-            } else {
-                self.registers.accumulator -= 1;
+            const before = self.registers.accumulator;
+            if (self.flags.carry) {
+                self.registers.accumulator -%= 1;
             }
-            const was_negative_before: bool = Flags.test_negative(self.registers.accumulator);
-            const result = @subWithOverflow(self.registers.accumulator, value);
-            self.load_accumulator(result[0]);
-            if (was_negative_before == self.flags.negative) {
+            self.load_accumulator(self.registers.accumulator -% value);
+            if (Flags.test_negative(before) and !self.flags.negative) {
                 self.flags.overflow = true;
             }
-            self.flags.carry = !(subtracting_carry_caused_carry or result[1] == 1);
+            self.flags.carry = self.registers.accumulator > before;
         },
 
         .CMP_IMM, .CMP_ZPG, .CMP_ZPX, .CMP_ABS, .CMP_ABX, .CMP_ABY, .CMP_IDX, .CMP_IDY => {
