@@ -826,9 +826,9 @@ fn store(self: *Self, register: std.meta.FieldEnum(Registers), address: u16) voi
 
 fn get_address(self: *Self, address: u16, mode: AddressingMode) u16 {
     return switch (mode) {
-        .ZPG => address & 0xFF,
-        .ZPX => (address + self.registers.x) & 0xFF,
-        .ZPY => (address + self.registers.y) & 0xFF,
+        .ZPG => address % 0xFF,
+        .ZPX => (address + self.registers.x) % 0xFF,
+        .ZPY => (address + self.registers.y) % 0xFF,
         .ABS => address,
         .ABX => address + self.registers.x,
         .ABY => address + self.registers.y,
