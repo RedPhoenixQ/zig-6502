@@ -54,9 +54,11 @@ const Flags = packed struct(u8) {
     interupt_disabled: bool = true,
     decimal_mode: bool = false,
     break_command: bool = false,
-    _padding: u1 = undefined,
+    _padding: u1 = 1,
     overflow: bool = false,
     negative: bool = false,
+
+    const STACK_MASK: u8 = 0b11001111;
 
     pub fn format(
         self: @This(),
@@ -69,7 +71,7 @@ const Flags = packed struct(u8) {
             try writer.writeByte(if (self.negative) 'N' else '_');
             try writer.writeByte(if (self.overflow) 'V' else '_');
             try writer.writeByte('_');
-            try writer.writeByte(if (self.decimal_mode) 'B' else '_');
+            try writer.writeByte(if (self.break_command) 'B' else '_');
             try writer.writeByte(if (self.decimal_mode) 'D' else '_');
             try writer.writeByte(if (self.interupt_disabled) 'I' else '_');
             try writer.writeByte(if (self.zero) 'Z' else '_');
@@ -436,7 +438,7 @@ pub fn step(self: *Self) Op {
         .PHA => self.push(self.registers.accumulator),
         .PHP => self.push_flags(),
         .PLA => self.load_accumulator(self.pop()),
-        .PLP => self.flags = @bitCast(self.pop()),
+        .PLP => self.pop_flags(),
 
         .AND_IMM, .AND_ZPG, .AND_ZPX, .AND_ABS, .AND_ABX, .AND_ABY, .AND_IDX, .AND_IDY => self.load_accumulator(self.registers.accumulator & self.fetch_instruction_data(switch (op) {
             .AND_IMM => null,
@@ -848,7 +850,7 @@ fn push_program_counter(self: *Self) void {
 }
 
 fn push_flags(self: *Self) void {
-    self.push(@bitCast(self.flags));
+    self.push(@as(u8, @bitCast(self.flags)) | ~Flags.STACK_MASK);
 }
 
 fn push(self: *Self, value: u8) void {
@@ -863,7 +865,7 @@ fn pop_program_counter(self: *Self) void {
 }
 
 fn pop_flags(self: *Self) void {
-    self.flags = @bitCast(self.pop());
+    self.flags = @bitCast(self.pop() & Flags.STACK_MASK);
 }
 
 fn pop(self: *Self) u8 {
