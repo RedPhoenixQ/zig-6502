@@ -498,11 +498,13 @@ pub fn step(self: *Self) Op {
                 .ADC_IDY => .IDY,
                 else => unreachable,
             });
-            const adding_carry_caused_carry = self.registers.accumulator == 255;
-            if (adding_carry_caused_carry) {
-                self.registers.accumulator = 0;
-            } else {
-                self.registers.accumulator += 1;
+            const adding_carry_caused_carry = self.flags.carry and self.registers.accumulator == 0xFF;
+            if (self.flags.carry) {
+                if (adding_carry_caused_carry) {
+                    self.registers.accumulator = 0;
+                } else {
+                    self.registers.accumulator += 1;
+                }
             }
             const was_negative_before: bool = Flags.test_negative(self.registers.accumulator);
             const result = @addWithOverflow(self.registers.accumulator, value);
@@ -552,10 +554,10 @@ pub fn step(self: *Self) Op {
                 .CMP_IDY => .IDY,
                 else => unreachable,
             });
-            const result = self.registers.accumulator - value;
+            const result = @subWithOverflow(self.registers.accumulator, value);
             self.flags.carry = self.registers.accumulator >= value;
             self.flags.zero = self.registers.accumulator == value;
-            self.flags.set_negative(result);
+            self.flags.set_negative(result[1]);
         },
 
         .CPX_IMM, .CPX_ZPG, .CPX_ABS => {
@@ -565,10 +567,10 @@ pub fn step(self: *Self) Op {
                 .CPX_ABS => .ABS,
                 else => unreachable,
             });
-            const result = self.registers.x - value;
+            const result = @subWithOverflow(self.registers.x, value);
             self.flags.carry = self.registers.x >= value;
             self.flags.zero = self.registers.x == value;
-            self.flags.set_negative(result);
+            self.flags.set_negative(result[1]);
         },
 
         .CPY_IMM, .CPY_ZPG, .CPY_ABS => {
@@ -578,10 +580,10 @@ pub fn step(self: *Self) Op {
                 .CPY_ABS => .ABS,
                 else => unreachable,
             });
-            const result = self.registers.y - value;
+            const result = @subWithOverflow(self.registers.y, value);
             self.flags.carry = self.registers.y >= value;
             self.flags.zero = self.registers.y == value;
-            self.flags.set_negative(result);
+            self.flags.set_negative(result[1]);
         },
 
         .INC_ZPG, .INC_ZPX, .INC_ABS, .INC_ABX => {
