@@ -733,7 +733,7 @@ pub fn step(self: *Self) Op {
         .SED => self.flags.decimal_mode = true,
         .SEI => self.flags.interupt_disabled = true,
 
-        .BRK => if (!self.flags.interupt_disabled) {
+        .BRK => {
             // Add two to get the correct offset of the return address on the stack
             self.registers.program_counter += 2;
             self.push_program_counter();
