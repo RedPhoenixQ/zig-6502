@@ -700,8 +700,9 @@ pub fn step(self: *Self) Op {
         .JMP_ABS => self.registers.program_counter = self.get_instruction_address(.ABS) - 1,
         .JMP_IND => self.registers.program_counter = self.get_instruction_address(.IND) - 1,
         .JSR_ABS => {
+            const subroutine_address = self.get_instruction_address(.ABS) - 1;
             self.push_program_counter();
-            self.registers.program_counter = self.get_instruction_address(.ABS) - 1;
+            self.registers.program_counter = subroutine_address;
         },
         .RTS => self.pop_program_counter(),
 
