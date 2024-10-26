@@ -29,19 +29,19 @@ const Registers = struct {
     ) !void {
         if (options.precision == 0) {
             try writer.writeAll("{ ");
-            try writer.print("PG: {x:0<4}, ", .{self.program_counter});
-            try writer.print("SP: {x:0<2}, ", .{self.stack_pointer});
-            try writer.print("A: {x:0<2}, ", .{self.accumulator});
-            try writer.print("X: {x:0<2}, ", .{self.x});
-            try writer.print("Y: {x:0<2}", .{self.y});
+            try writer.print("PG: {x:0>4}, ", .{self.program_counter});
+            try writer.print("SP: {x:>2}, ", .{self.stack_pointer});
+            try writer.print("A: {x:0>2}, ", .{self.accumulator});
+            try writer.print("X: {x:0>2}, ", .{self.x});
+            try writer.print("Y: {x:0>2}", .{self.y});
             try writer.writeAll(" }");
         } else {
             try writer.writeAll("Register{\n");
-            try writer.print("\tprogram_counter: {x:0<4} ({0b:0>16}),\n", .{self.program_counter});
-            try writer.print("\tstack_pointer: {x:0<2} ({0b:0>8}),\n", .{self.stack_pointer});
-            try writer.print("\taccumulator: {x:0<2} ({0b:0>8}),\n", .{self.accumulator});
-            try writer.print("\tx: {x:0<2} ({0b:0>8}),\n", .{self.x});
-            try writer.print("\ty: {x:0<2} ({0b:0>8}),\n", .{self.y});
+            try writer.print("\tprogram_counter: {x:0>4} ({0b:0>16}),\n", .{self.program_counter});
+            try writer.print("\tstack_pointer: {x:0>2} ({0b:0>8}),\n", .{self.stack_pointer});
+            try writer.print("\taccumulator: {x:0>2} ({0b:0>8}),\n", .{self.accumulator});
+            try writer.print("\tx: {x:0>2} ({0b:0>8}),\n", .{self.x});
+            try writer.print("\ty: {x:0>2} ({0b:0>8}),\n", .{self.y});
             try writer.writeAll("}\n");
         }
     }
