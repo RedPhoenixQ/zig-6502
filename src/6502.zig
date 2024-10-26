@@ -24,44 +24,68 @@ const Registers = struct {
     pub fn format(
         self: @This(),
         comptime _: []const u8,
-        _: std.fmt.FormatOptions,
+        options: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
-        try writer.writeAll("Register{\n");
-        _ = try writer.print("\tprogram_counter: {x:0<4} ({0b:0>16}),\n", .{self.program_counter});
-        _ = try writer.print("\tstack_pointer: {x:0<2} ({0b:0>8}),\n", .{self.stack_pointer});
-        _ = try writer.print("\taccumulator: {x:0<2} ({0b:0>8}),\n", .{self.accumulator});
-        _ = try writer.print("\tx: {x:0<2} ({0b:0>8}),\n", .{self.x});
-        _ = try writer.print("\ty: {x:0<2} ({0b:0>8}),\n", .{self.y});
-        try writer.writeAll("}\n");
+        if (options.precision == 0) {
+            try writer.writeByte('{');
+            try writer.print("PG: {x:0<4}, ", .{self.program_counter});
+            try writer.print("SP: {x:0<2}, ", .{self.stack_pointer});
+            try writer.print("A: {x:0<2}, ", .{self.accumulator});
+            try writer.print("X: {x:0<2}, ", .{self.x});
+            try writer.print("Y: {x:0<2}", .{self.y});
+            try writer.writeByte('}');
+        } else {
+            try writer.writeAll("Register{\n");
+            try writer.print("\tprogram_counter: {x:0<4} ({0b:0>16}),\n", .{self.program_counter});
+            try writer.print("\tstack_pointer: {x:0<2} ({0b:0>8}),\n", .{self.stack_pointer});
+            try writer.print("\taccumulator: {x:0<2} ({0b:0>8}),\n", .{self.accumulator});
+            try writer.print("\tx: {x:0<2} ({0b:0>8}),\n", .{self.x});
+            try writer.print("\ty: {x:0<2} ({0b:0>8}),\n", .{self.y});
+            try writer.writeAll("}\n");
+        }
     }
 };
 
+/// https://www.nesdev.org/wiki/Status_flags
 const Flags = packed struct(u8) {
     carry: bool = false,
     zero: bool = false,
     interupt_disabled: bool = true,
     decimal_mode: bool = false,
     break_command: bool = false,
+    _padding: u1 = undefined,
     overflow: bool = false,
     negative: bool = false,
-    _padding: u1 = undefined,
 
     pub fn format(
         self: @This(),
         comptime _: []const u8,
-        _: std.fmt.FormatOptions,
+        options: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
-        try writer.writeAll("Flags{\n");
-        _ = try writer.print("\tcarry: {},\n", .{self.carry});
-        _ = try writer.print("\tzero: {},\n", .{self.zero});
-        _ = try writer.print("\tinterupt_disabled: {},\n", .{self.interupt_disabled});
-        _ = try writer.print("\tdecimal_mode: {},\n", .{self.decimal_mode});
-        _ = try writer.print("\tbreak_command: {},\n", .{self.break_command});
-        _ = try writer.print("\toverflow: {},\n", .{self.overflow});
-        _ = try writer.print("\tnegative: {},\n", .{self.negative});
-        try writer.writeAll("}\n");
+        if (options.precision == 0) {
+            try writer.writeByte('[');
+            try writer.writeByte(if (self.negative) 'N' else '_');
+            try writer.writeByte(if (self.overflow) 'V' else '_');
+            try writer.writeByte('_');
+            try writer.writeByte(if (self.decimal_mode) 'B' else '_');
+            try writer.writeByte(if (self.decimal_mode) 'D' else '_');
+            try writer.writeByte(if (self.interupt_disabled) 'I' else '_');
+            try writer.writeByte(if (self.zero) 'Z' else '_');
+            try writer.writeByte(if (self.carry) 'C' else '_');
+            try writer.writeByte(']');
+        } else {
+            try writer.writeAll("Flags{\n");
+            try writer.print("\tcarry: {},\n", .{self.carry});
+            try writer.print("\tzero: {},\n", .{self.zero});
+            try writer.print("\tinterupt_disabled: {},\n", .{self.interupt_disabled});
+            try writer.print("\tdecimal_mode: {},\n", .{self.decimal_mode});
+            try writer.print("\tbreak_command: {},\n", .{self.break_command});
+            try writer.print("\toverflow: {},\n", .{self.overflow});
+            try writer.print("\tnegative: {},\n", .{self.negative});
+            try writer.writeAll("}\n");
+        }
     }
 
     fn set_zero(self: *Flags, value: u8) void {
@@ -361,10 +385,7 @@ pub fn reset(self: *Self) void {
 
 pub fn step(self: *Self) Op {
     const program_counter_before = self.registers.program_counter;
-
-    std.debug.print("{x:0>4} ({x:0>2}): ", .{ self.registers.program_counter + 1, self.memory[self.registers.program_counter + 1 .. self.registers.program_counter + 4] });
     const instruction: Op = @enumFromInt(self.next_program_u8());
-    std.debug.print("{}\n", .{instruction});
 
     switch (instruction) {
         .LDA_IMM, .LDA_ZPG, .LDA_ZPX, .LDA_ABS, .LDA_ABX, .LDA_ABY, .LDA_IDX, .LDA_IDY => self.load_accumulator(self.fetch_instruction_data(switch (instruction) {

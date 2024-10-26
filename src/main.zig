@@ -13,7 +13,7 @@ pub fn main() !void {
     var cpu = CPU.new(mem);
     cpu.step();
 
-    cpu.printRegisters();
+    std.debug.print("{}{}", .{ cpu.registers, cpu.flags });
 }
 
 test "functional test" {
@@ -22,17 +22,13 @@ test "functional test" {
     @memcpy(mem[0xa..], test_binary[0..]);
     var cpu = CPU.new(mem.*);
     cpu.registers.program_counter = 0x0400 - 1;
-    cpu.printRegisters();
 
     while (true) {
+        const pg = cpu.registers.program_counter + 1;
+        std.debug.print("{x:0>4} {x:0>2}: ", .{ pg, cpu.memory[pg .. pg + 3] });
         switch (cpu.step()) {
-            .NOP => {},
-            .DEX => std.debug.print("x reg: {x:0>2}\n", .{cpu.registers.x}),
-            .DEY => std.debug.print("y reg: {x:0>2}\n", .{cpu.registers.y}),
-            else => {
-                cpu.printRegisters();
-                cpu.printFlags();
-            },
+            .NOP => |op| std.debug.print("{s:<8}\n", .{@tagName(op)}),
+            else => |op| std.debug.print("{s:<8} {:.0} {:.0}\n", .{ @tagName(op), cpu.registers, cpu.flags }),
         }
     }
 }
