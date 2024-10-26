@@ -554,10 +554,9 @@ pub fn step(self: *Self) Op {
                 .CMP_IDY => .IDY,
                 else => unreachable,
             });
-            const result = @subWithOverflow(self.registers.accumulator, value);
             self.flags.carry = self.registers.accumulator >= value;
             self.flags.zero = self.registers.accumulator == value;
-            self.flags.set_negative(result[1]);
+            self.flags.set_negative(self.registers.accumulator -% value);
         },
 
         .CPX_IMM, .CPX_ZPG, .CPX_ABS => {
@@ -567,10 +566,9 @@ pub fn step(self: *Self) Op {
                 .CPX_ABS => .ABS,
                 else => unreachable,
             });
-            const result = @subWithOverflow(self.registers.x, value);
             self.flags.carry = self.registers.x >= value;
             self.flags.zero = self.registers.x == value;
-            self.flags.set_negative(result[1]);
+            self.flags.set_negative(self.registers.x -% value);
         },
 
         .CPY_IMM, .CPY_ZPG, .CPY_ABS => {
@@ -580,10 +578,9 @@ pub fn step(self: *Self) Op {
                 .CPY_ABS => .ABS,
                 else => unreachable,
             });
-            const result = @subWithOverflow(self.registers.y, value);
             self.flags.carry = self.registers.y >= value;
             self.flags.zero = self.registers.y == value;
-            self.flags.set_negative(result[1]);
+            self.flags.set_negative(self.registers.y -% value);
         },
 
         .INC_ZPG, .INC_ZPX, .INC_ABS, .INC_ABX => {
