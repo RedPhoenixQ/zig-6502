@@ -19,7 +19,7 @@ pub fn main() !void {
 test "functional test" {
     const test_binary = @embedFile("./tests/6502_functional_test.bin");
     var mem = try std.testing.allocator.create([0x10000]u8);
-    @memcpy(mem[0..], test_binary[0..]);
+    @memcpy(mem[0xa..], test_binary[0..]);
     var cpu = CPU.new(mem.*);
     cpu.registers.program_counter = 0x0400 - 1;
     cpu.printRegisters();
