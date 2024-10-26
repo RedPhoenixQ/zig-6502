@@ -752,7 +752,7 @@ pub fn step(self: *Self) Op {
     }
 
     if (self.registers.program_counter == program_counter_before) {
-        std.debug.panic("Trap encountered at {x}\n", .{self.registers.program_counter});
+        std.debug.panic("Trap encountered at {x:0>4}\n", .{self.registers.program_counter + 1});
     }
 
     return op;
