@@ -706,10 +706,9 @@ pub fn step(self: *Self) Op {
         .JMP_IND => self.registers.program_counter = self.get_instruction_address(.IND) - 1,
         .JSR_ABS => {
             self.push_program_counter();
-            self.push_flags();
             self.registers.program_counter = self.get_instruction_address(.ABS) - 1;
         },
-        .RTS => self.registers.program_counter = self.pop(),
+        .RTS => self.pop_program_counter(),
 
         .BCC_REL, .BCS_REL, .BEQ_REL, .BMI_REL, .BNE_REL, .BPL_REL, .BVC_REL, .BVS_REL => {
             const should_branch = switch (op) {
