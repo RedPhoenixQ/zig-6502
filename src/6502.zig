@@ -866,7 +866,7 @@ fn push_flags(self: *Self) void {
 
 fn push(self: *Self, value: u8) void {
     self.memory[self.get_current_stack_address()] = value;
-    self.registers.stack_pointer -= 1;
+    self.registers.stack_pointer -%= 1;
 }
 
 fn pop_program_counter(self: *Self) void {
@@ -881,6 +881,6 @@ fn pop_flags(self: *Self) void {
 }
 
 fn pop(self: *Self) u8 {
-    self.registers.stack_pointer += 1;
+    self.registers.stack_pointer +%= 1;
     return self.memory[self.get_current_stack_address()];
 }
