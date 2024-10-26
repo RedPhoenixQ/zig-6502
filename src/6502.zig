@@ -827,16 +827,19 @@ fn store(self: *Self, register: std.meta.FieldEnum(Registers), address: u16) voi
 
 fn get_address(self: *Self, address: u16, mode: AddressingMode) u16 {
     return switch (mode) {
-        .ZPG => address % 0xFF,
-        .ZPX => (address + self.registers.x) % 0xFF,
-        .ZPY => (address + self.registers.y) % 0xFF,
+        .ZPG => blk: {
+            std.debug.assert(address <= 0xFF);
+            break :blk address;
+        },
+        .ZPX => (@as(u8, @intCast(address)) +% self.registers.x),
+        .ZPY => (@as(u8, @intCast(address)) +% self.registers.y),
         .ABS => address,
-        .ABX => address + self.registers.x,
-        .ABY => address + self.registers.y,
+        .ABX => address +% self.registers.x,
+        .ABY => address +% self.registers.y,
         .IND => self.fetch_u16(address),
-        .IDX => self.fetch_u16(address + self.registers.x),
+        .IDX => self.fetch_u16(address +% self.registers.x),
         // http://forum.6502.org/viewtopic.php?f=2&t=2195#p19862
-        .IDY => self.fetch_u16(address) + self.registers.y,
+        .IDY => self.fetch_u16(address) +% self.registers.y,
         .REL => blk: {
             const relative = @as(i8, @bitCast(@as(u8, @intCast(address))));
             std.debug.print("relative {}\n", .{relative});
