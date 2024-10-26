@@ -28,13 +28,13 @@ const Registers = struct {
         writer: anytype,
     ) !void {
         if (options.precision == 0) {
-            try writer.writeByte('{');
+            try writer.writeAll("{ ");
             try writer.print("PG: {x:0<4}, ", .{self.program_counter});
             try writer.print("SP: {x:0<2}, ", .{self.stack_pointer});
             try writer.print("A: {x:0<2}, ", .{self.accumulator});
             try writer.print("X: {x:0<2}, ", .{self.x});
             try writer.print("Y: {x:0<2}", .{self.y});
-            try writer.writeByte('}');
+            try writer.writeAll(" }");
         } else {
             try writer.writeAll("Register{\n");
             try writer.print("\tprogram_counter: {x:0<4} ({0b:0>16}),\n", .{self.program_counter});
@@ -371,24 +371,16 @@ pub fn new(memory: Memory) Self {
     };
 }
 
-pub fn printRegisters(self: Self) void {
-    std.debug.print("{}", .{self.registers});
-}
-
-pub fn printFlags(self: Self) void {
-    std.debug.print("{}", .{self.flags});
-}
-
 pub fn reset(self: *Self) void {
     self.registers.program_counter = self.fetch_u16(POWER_ON_RESET_ADDRESS);
 }
 
 pub fn step(self: *Self) Op {
     const program_counter_before = self.registers.program_counter;
-    const instruction: Op = @enumFromInt(self.next_program_u8());
+    const op: Op = @enumFromInt(self.next_program_u8());
 
-    switch (instruction) {
-        .LDA_IMM, .LDA_ZPG, .LDA_ZPX, .LDA_ABS, .LDA_ABX, .LDA_ABY, .LDA_IDX, .LDA_IDY => self.load_accumulator(self.fetch_instruction_data(switch (instruction) {
+    switch (op) {
+        .LDA_IMM, .LDA_ZPG, .LDA_ZPX, .LDA_ABS, .LDA_ABX, .LDA_ABY, .LDA_IDX, .LDA_IDY => self.load_accumulator(self.fetch_instruction_data(switch (op) {
             .LDA_IMM => null,
             .LDA_ZPG => .ZPG,
             .LDA_ZPX => .ZPX,
@@ -400,7 +392,7 @@ pub fn step(self: *Self) Op {
             else => unreachable,
         })),
 
-        .LDX_IMM, .LDX_ZPG, .LDX_ZPY, .LDX_ABS, .LDX_ABY => self.load_x(self.fetch_instruction_data(switch (instruction) {
+        .LDX_IMM, .LDX_ZPG, .LDX_ZPY, .LDX_ABS, .LDX_ABY => self.load_x(self.fetch_instruction_data(switch (op) {
             .LDX_IMM => null,
             .LDX_ZPG => .ZPG,
             .LDX_ZPY => .ZPY,
@@ -409,7 +401,7 @@ pub fn step(self: *Self) Op {
             else => unreachable,
         })),
 
-        .LDY_IMM, .LDY_ZPG, .LDY_ZPX, .LDY_ABS, .LDY_ABX => self.load_y(self.fetch_instruction_data(switch (instruction) {
+        .LDY_IMM, .LDY_ZPG, .LDY_ZPX, .LDY_ABS, .LDY_ABX => self.load_y(self.fetch_instruction_data(switch (op) {
             .LDY_IMM => null,
             .LDY_ZPG => .ZPG,
             .LDY_ZPX => .ZPX,
@@ -446,7 +438,7 @@ pub fn step(self: *Self) Op {
         .PLA => self.load_accumulator(self.pop()),
         .PLP => self.flags = @bitCast(self.pop()),
 
-        .AND_IMM, .AND_ZPG, .AND_ZPX, .AND_ABS, .AND_ABX, .AND_ABY, .AND_IDX, .AND_IDY => self.load_accumulator(self.registers.accumulator & self.fetch_instruction_data(switch (instruction) {
+        .AND_IMM, .AND_ZPG, .AND_ZPX, .AND_ABS, .AND_ABX, .AND_ABY, .AND_IDX, .AND_IDY => self.load_accumulator(self.registers.accumulator & self.fetch_instruction_data(switch (op) {
             .AND_IMM => null,
             .AND_ZPG => .ZPG,
             .AND_ZPX => .ZPX,
@@ -458,7 +450,7 @@ pub fn step(self: *Self) Op {
             else => unreachable,
         })),
 
-        .EOR_IMM, .EOR_ZPG, .EOR_ZPX, .EOR_ABS, .EOR_ABX, .EOR_ABY, .EOR_IDX, .EOR_IDY => self.load_accumulator(self.registers.accumulator ^ self.fetch_instruction_data(switch (instruction) {
+        .EOR_IMM, .EOR_ZPG, .EOR_ZPX, .EOR_ABS, .EOR_ABX, .EOR_ABY, .EOR_IDX, .EOR_IDY => self.load_accumulator(self.registers.accumulator ^ self.fetch_instruction_data(switch (op) {
             .EOR_IMM => null,
             .EOR_ZPG => .ZPG,
             .EOR_ZPX => .ZPX,
@@ -470,7 +462,7 @@ pub fn step(self: *Self) Op {
             else => unreachable,
         })),
 
-        .ORA_IMM, .ORA_ZPG, .ORA_ZPX, .ORA_ABS, .ORA_ABX, .ORA_ABY, .ORA_IDX, .ORA_IDY => self.load_accumulator(self.registers.accumulator | self.fetch_instruction_data(switch (instruction) {
+        .ORA_IMM, .ORA_ZPG, .ORA_ZPX, .ORA_ABS, .ORA_ABX, .ORA_ABY, .ORA_IDX, .ORA_IDY => self.load_accumulator(self.registers.accumulator | self.fetch_instruction_data(switch (op) {
             .ORA_IMM => null,
             .ORA_ZPG => .ZPG,
             .ORA_ZPX => .ZPX,
@@ -483,7 +475,7 @@ pub fn step(self: *Self) Op {
         })),
 
         .BIT_ZPG, .BIT_ABS => {
-            const value = self.fetch_instruction_data(switch (instruction) {
+            const value = self.fetch_instruction_data(switch (op) {
                 .BIT_ABS => .ABS,
                 .BIT_ZPG => .ZPG,
                 else => unreachable,
@@ -495,7 +487,7 @@ pub fn step(self: *Self) Op {
         },
 
         .ADC_IMM, .ADC_ZPG, .ADC_ZPX, .ADC_ABS, .ADC_ABX, .ADC_ABY, .ADC_IDX, .ADC_IDY => {
-            const value = self.fetch_instruction_data(switch (instruction) {
+            const value = self.fetch_instruction_data(switch (op) {
                 .ADC_IMM => null,
                 .ADC_ZPG => .ZPG,
                 .ADC_ZPX => .ZPX,
@@ -522,7 +514,7 @@ pub fn step(self: *Self) Op {
         },
 
         .SBC_IMM, .SBC_ZPG, .SBC_ZPX, .SBC_ABS, .SBC_ABX, .SBC_ABY, .SBC_IDX, .SBC_IDY => {
-            const value = self.fetch_instruction_data(switch (instruction) {
+            const value = self.fetch_instruction_data(switch (op) {
                 .SBC_IMM => null,
                 .SBC_ZPG => .ZPG,
                 .SBC_ZPX => .ZPX,
@@ -549,7 +541,7 @@ pub fn step(self: *Self) Op {
         },
 
         .CMP_IMM, .CMP_ZPG, .CMP_ZPX, .CMP_ABS, .CMP_ABX, .CMP_ABY, .CMP_IDX, .CMP_IDY => {
-            const value = self.fetch_instruction_data(switch (instruction) {
+            const value = self.fetch_instruction_data(switch (op) {
                 .CMP_IMM => null,
                 .CMP_ZPG => .ZPG,
                 .CMP_ZPX => .ZPX,
@@ -567,7 +559,7 @@ pub fn step(self: *Self) Op {
         },
 
         .CPX_IMM, .CPX_ZPG, .CPX_ABS => {
-            const value = self.fetch_instruction_data(switch (instruction) {
+            const value = self.fetch_instruction_data(switch (op) {
                 .CPX_IMM => null,
                 .CPX_ZPG => .ZPG,
                 .CPX_ABS => .ABS,
@@ -580,7 +572,7 @@ pub fn step(self: *Self) Op {
         },
 
         .CPY_IMM, .CPY_ZPG, .CPY_ABS => {
-            const value = self.fetch_instruction_data(switch (instruction) {
+            const value = self.fetch_instruction_data(switch (op) {
                 .CPY_IMM => null,
                 .CPY_ZPG => .ZPG,
                 .CPY_ABS => .ABS,
@@ -593,7 +585,7 @@ pub fn step(self: *Self) Op {
         },
 
         .INC_ZPG, .INC_ZPX, .INC_ABS, .INC_ABX => {
-            const address = self.get_instruction_address(switch (instruction) {
+            const address = self.get_instruction_address(switch (op) {
                 .INC_ZPG => .ZPG,
                 .INC_ZPX => .ZPX,
                 .INC_ABS => .ABS,
@@ -607,7 +599,7 @@ pub fn step(self: *Self) Op {
         .INY => self.load_x(@addWithOverflow(self.registers.y, 1)[0]),
 
         .DEC_ZPG, .DEC_ZPX, .DEC_ABS, .DEC_ABX => {
-            const address = self.get_instruction_address(switch (instruction) {
+            const address = self.get_instruction_address(switch (op) {
                 .DEC_ZPG => .ZPG,
                 .DEC_ZPX => .ZPX,
                 .DEC_ABS => .ABS,
@@ -626,7 +618,7 @@ pub fn step(self: *Self) Op {
         },
 
         .ASL_ZPG, .ASL_ZPX, .ASL_ABS, .ASL_ABX => {
-            const address = self.get_instruction_address(switch (instruction) {
+            const address = self.get_instruction_address(switch (op) {
                 .ASL_ZPG => .ZPG,
                 .ASL_ZPX => .ZPX,
                 .ASL_ABS => .ABS,
@@ -645,7 +637,7 @@ pub fn step(self: *Self) Op {
         },
 
         .LSR_ZPG, .LSR_ZPX, .LSR_ABS, .LSR_ABX => {
-            const address = self.get_instruction_address(switch (instruction) {
+            const address = self.get_instruction_address(switch (op) {
                 .LSR_ZPG => .ZPG,
                 .LSR_ZPX => .ZPX,
                 .LSR_ABS => .ABS,
@@ -668,7 +660,7 @@ pub fn step(self: *Self) Op {
         },
 
         .ROL_ZPG, .ROL_ZPX, .ROL_ABS, .ROL_ABX => {
-            const address = self.get_instruction_address(switch (instruction) {
+            const address = self.get_instruction_address(switch (op) {
                 .ROL_ZPG => .ZPG,
                 .ROL_ZPX => .ZPX,
                 .ROL_ABS => .ABS,
@@ -694,7 +686,7 @@ pub fn step(self: *Self) Op {
         },
 
         .ROR_ZPG, .ROR_ZPX, .ROR_ABS, .ROR_ABX => {
-            const address = self.get_instruction_address(switch (instruction) {
+            const address = self.get_instruction_address(switch (op) {
                 .ROR_ZPG => .ZPG,
                 .ROR_ZPX => .ZPX,
                 .ROR_ABS => .ABS,
@@ -720,7 +712,7 @@ pub fn step(self: *Self) Op {
         .RTS => self.registers.program_counter = self.pop(),
 
         .BCC_REL, .BCS_REL, .BEQ_REL, .BMI_REL, .BNE_REL, .BPL_REL, .BVC_REL, .BVS_REL => {
-            const should_branch = switch (instruction) {
+            const should_branch = switch (op) {
                 .BCC_REL => !self.flags.carry,
                 .BCS_REL => self.flags.carry,
                 .BEQ_REL => self.flags.zero,
@@ -763,7 +755,7 @@ pub fn step(self: *Self) Op {
         std.debug.panic("Trap encountered at {x}\n", .{self.registers.program_counter});
     }
 
-    return instruction;
+    return op;
 }
 
 fn next_program_u8(self: *Self) u8 {
