@@ -359,7 +359,7 @@ pub fn reset(self: *Self) void {
     self.registers.program_counter = self.fetch_u16(POWER_ON_RESET_ADDRESS);
 }
 
-pub fn step(self: *Self) void {
+pub fn step(self: *Self) Op {
     const program_counter_before = self.registers.program_counter;
 
     std.debug.print("{x:0>4} ({x:0>2}): ", .{ self.registers.program_counter + 1, self.memory[self.registers.program_counter + 1 .. self.registers.program_counter + 4] });
@@ -741,6 +741,8 @@ pub fn step(self: *Self) void {
     if (self.registers.program_counter == program_counter_before) {
         std.debug.panic("Trap encountered at {x}\n", .{self.registers.program_counter});
     }
+
+    return instruction;
 }
 
 fn next_program_u8(self: *Self) u8 {

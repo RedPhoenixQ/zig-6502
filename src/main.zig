@@ -25,8 +25,14 @@ test "functional test" {
     cpu.printRegisters();
 
     while (true) {
-        cpu.step();
-        cpu.printRegisters();
-        cpu.printFlags();
+        switch (cpu.step()) {
+            .NOP => {},
+            .DEX => std.debug.print("x reg: {x:0>2}\n", .{cpu.registers.x}),
+            .DEY => std.debug.print("y reg: {x:0>2}\n", .{cpu.registers.y}),
+            else => {
+                cpu.printRegisters();
+                cpu.printFlags();
+            },
+        }
     }
 }
