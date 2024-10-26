@@ -28,11 +28,11 @@ const Registers = struct {
         writer: anytype,
     ) !void {
         try writer.writeAll("Register{\n");
-        _ = try writer.print("\tprogram_counter: {x},\n", .{self.program_counter});
-        _ = try writer.print("\tstack_pointer: {x},\n", .{self.stack_pointer});
-        _ = try writer.print("\taccumulator: {x},\n", .{self.accumulator});
-        _ = try writer.print("\tx: {x},\n", .{self.x});
-        _ = try writer.print("\ty: {x},\n", .{self.y});
+        _ = try writer.print("\tprogram_counter: {x:0<4} ({0b:0>16}),\n", .{self.program_counter});
+        _ = try writer.print("\tstack_pointer: {x:0<2} ({0b:0>8}),\n", .{self.stack_pointer});
+        _ = try writer.print("\taccumulator: {x:0<2} ({0b:0>8}),\n", .{self.accumulator});
+        _ = try writer.print("\tx: {x:0<2} ({0b:0>8}),\n", .{self.x});
+        _ = try writer.print("\ty: {x:0<2} ({0b:0>8}),\n", .{self.y});
         try writer.writeAll("}\n");
     }
 };
