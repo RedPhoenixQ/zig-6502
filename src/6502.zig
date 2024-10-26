@@ -840,9 +840,9 @@ fn get_address(self: *Self, address: u16, mode: AddressingMode) u16 {
             const relative = @as(i8, @bitCast(@as(u8, @intCast(address))));
             std.debug.print("relative {}\n", .{relative});
             if (relative < 0) {
-                break :blk self.registers.program_counter - @as(u16, @abs(relative));
+                break :blk self.registers.program_counter - @abs(relative);
             } else {
-                break :blk self.registers.program_counter + @as(u16, @intCast(relative));
+                break :blk self.registers.program_counter + @abs(relative);
             }
         },
     };
