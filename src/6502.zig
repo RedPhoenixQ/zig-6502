@@ -854,10 +854,11 @@ fn get_current_stack_address(self: *Self) u16 {
 }
 
 fn push_program_counter(self: *Self) void {
-    self.registers.stack_pointer -= 1;
-    const address = self.get_current_stack_address();
-    std.mem.writeInt(u16, @as(*[2]u8, @ptrCast(self.memory[address .. address + 2])), self.registers.program_counter, .little);
-    self.registers.stack_pointer -= 1;
+    var bytes: [2]u8 = undefined;
+    std.mem.writeInt(u16, &bytes, self.registers.program_counter, .little);
+    // This handles SP overflows in the middle of the two bytes
+    self.push(bytes[1]);
+    self.push(bytes[0]);
 }
 
 fn push_flags(self: *Self) void {
@@ -870,10 +871,9 @@ fn push(self: *Self, value: u8) void {
 }
 
 fn pop_program_counter(self: *Self) void {
-    self.registers.stack_pointer += 1;
-    const address = self.get_current_stack_address();
-    self.registers.program_counter = std.mem.readInt(u16, @as(*[2]u8, @ptrCast(self.memory[address .. address + 2])), .little);
-    self.registers.stack_pointer += 1;
+    // This handles SP overflows in the middle of the two bytes
+    const bytes: [2]u8 = .{ self.pop(), self.pop() };
+    self.registers.program_counter = std.mem.readInt(u16, &bytes, .little);
 }
 
 fn pop_flags(self: *Self) void {
