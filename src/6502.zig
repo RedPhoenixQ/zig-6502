@@ -360,9 +360,9 @@ pub fn reset(self: *Self) void {
 }
 
 pub fn step(self: *Self) void {
+    std.debug.print("{x:0>4} ({x:0>2}): ", .{ self.registers.program_counter + 1, self.memory[self.registers.program_counter + 1 .. self.registers.program_counter + 4] });
     const instruction: Op = @enumFromInt(self.next_program_u8());
-
-    std.debug.print("instruction {} at {x}\n", .{ instruction, self.registers.program_counter });
+    std.debug.print("{}\n", .{instruction});
 
     switch (instruction) {
         .LDA_IMM, .LDA_ZPG, .LDA_ZPX, .LDA_ABS, .LDA_ABX, .LDA_ABY, .LDA_IDX, .LDA_IDY => self.load_accumulator(self.fetch_instruction_data(switch (instruction) {
