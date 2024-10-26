@@ -583,11 +583,13 @@ pub fn step(self: *Self) Op {
                 .INC_ABX => .ABX,
                 else => unreachable,
             });
-            self.memory[address] = @addWithOverflow(self.memory[address], 1)[0];
+            self.memory[address] +%= 1;
+            self.flags.set_negative(self.memory[address]);
+            self.flags.set_zero(self.memory[address]);
         },
 
-        .INX => self.load_x(@addWithOverflow(self.registers.x, 1)[0]),
-        .INY => self.load_x(@addWithOverflow(self.registers.y, 1)[0]),
+        .INX => self.load_x(self.registers.x +% 1),
+        .INY => self.load_y(self.registers.y +% 1),
 
         .DEC_ZPG, .DEC_ZPX, .DEC_ABS, .DEC_ABX => {
             const address = self.get_instruction_address(switch (op) {
@@ -597,11 +599,13 @@ pub fn step(self: *Self) Op {
                 .DEC_ABX => .ABX,
                 else => unreachable,
             });
-            self.memory[address] = @subWithOverflow(self.memory[address], 1)[0];
+            self.memory[address] -%= 1;
+            self.flags.set_negative(self.memory[address]);
+            self.flags.set_zero(self.memory[address]);
         },
 
-        .DEX => self.load_x(@subWithOverflow(self.registers.x, 1)[0]),
-        .DEY => self.load_y(@subWithOverflow(self.registers.y, 1)[0]),
+        .DEX => self.load_x(self.registers.x -% 1),
+        .DEY => self.load_y(self.registers.y -% 1),
 
         .ASL => {
             self.flags.carry = self.registers.accumulator & 0b10000000 > 0;
