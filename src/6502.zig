@@ -696,29 +696,23 @@ pub fn step(self: *Self) void {
         },
         .RTS => self.registers.program_counter = self.pop(),
 
-        .BCC_REL => if (!self.flags.carry) {
-            self.registers.program_counter = self.get_instruction_address(.REL);
-        },
-        .BCS_REL => if (self.flags.carry) {
-            self.registers.program_counter = self.get_instruction_address(.REL);
-        },
-        .BEQ_REL => if (self.flags.zero) {
-            self.registers.program_counter = self.get_instruction_address(.REL);
-        },
-        .BMI_REL => if (self.flags.negative) {
-            self.registers.program_counter = self.get_instruction_address(.REL);
-        },
-        .BNE_REL => if (!self.flags.zero) {
-            self.registers.program_counter = self.get_instruction_address(.REL);
-        },
-        .BPL_REL => if (!self.flags.negative) {
-            self.registers.program_counter = self.get_instruction_address(.REL);
-        },
-        .BVC_REL => if (!self.flags.overflow) {
-            self.registers.program_counter = self.get_instruction_address(.REL);
-        },
-        .BVS_REL => if (self.flags.overflow) {
-            self.registers.program_counter = self.get_instruction_address(.REL);
+        .BCC_REL, .BCS_REL, .BEQ_REL, .BMI_REL, .BNE_REL, .BPL_REL, .BVC_REL, .BVS_REL => {
+            const should_branch = switch (instruction) {
+                .BCC_REL => !self.flags.carry,
+                .BCS_REL => self.flags.carry,
+                .BEQ_REL => self.flags.zero,
+                .BMI_REL => self.flags.negative,
+                .BNE_REL => !self.flags.zero,
+                .BPL_REL => !self.flags.negative,
+                .BVC_REL => !self.flags.overflow,
+                .BVS_REL => self.flags.overflow,
+                else => unreachable,
+            };
+            // Must always consume the offset byte
+            const offset = self.next_program_u8();
+            if (should_branch) {
+                self.registers.program_counter = self.get_address(offset, .REL);
+            }
         },
 
         .CLC => self.flags.carry = false,
