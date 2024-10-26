@@ -577,7 +577,7 @@ pub fn step(self: *Self) void {
                 .INC_ABX => .ABX,
                 else => unreachable,
             });
-            self.memory[address] += 1;
+            self.memory[address] = @addWithOverflow(self.memory[address], 1)[0];
         },
 
         .INX => self.load_x(@addWithOverflow(self.registers.x, 1)[0]),
@@ -591,7 +591,7 @@ pub fn step(self: *Self) void {
                 .DEC_ABX => .ABX,
                 else => unreachable,
             });
-            self.memory[address] -= 1;
+            self.memory[address] = @subWithOverflow(self.memory[address], 1)[0];
         },
 
         .DEX => self.load_x(@subWithOverflow(self.registers.x, 1)[0]),
