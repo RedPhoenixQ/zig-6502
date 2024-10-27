@@ -641,44 +641,51 @@ pub fn step(self: *Self) Op {
         .DEY => self.load_y(self.registers.y -% 1),
 
         .ASL => {
+            self.cycles +%= 1;
             self.flags.carry = self.registers.accumulator & 0b10000000 > 0;
             self.load_accumulator(self.registers.accumulator << 1);
         },
 
         .ASL_ZPG, .ASL_ZPX, .ASL_ABS, .ASL_ABX => {
+            self.cycles +%= 1;
             const address = self.get_instruction_address(switch (op) {
                 .ASL_ZPG => .ZPG,
                 .ASL_ZPX => .ZPX,
                 .ASL_ABS => .ABS,
-                .ASL_ABX => .ABX,
+                .ASL_ABX => .ABX_MAX_CYCLE,
                 else => unreachable,
             });
             self.flags.carry = self.memory[address] & 0b10000000 > 0;
             self.memory[address] <<= 1;
+            self.cycles +%= 2; // Get and set the memory value
             self.flags.set_zero(self.memory[address]);
             self.flags.set_negative(self.memory[address]);
         },
 
         .LSR => {
+            self.cycles +%= 1;
             self.flags.carry = self.registers.accumulator & 0b1 > 0;
             self.load_accumulator(self.registers.accumulator >> 1);
         },
 
         .LSR_ZPG, .LSR_ZPX, .LSR_ABS, .LSR_ABX => {
+            self.cycles +%= 1;
             const address = self.get_instruction_address(switch (op) {
                 .LSR_ZPG => .ZPG,
                 .LSR_ZPX => .ZPX,
                 .LSR_ABS => .ABS,
-                .LSR_ABX => .ABX,
+                .LSR_ABX => .ABX_MAX_CYCLE,
                 else => unreachable,
             });
             self.flags.carry = self.memory[address] & 0b1 > 0;
             self.memory[address] >>= 1;
+            self.cycles +%= 2; // Get and set the memory value
             self.flags.set_zero(self.memory[address]);
             self.flags.set_negative(self.memory[address]);
         },
 
         .ROL => {
+            self.cycles +%= 1;
             const carry = self.registers.accumulator & 0b10000000 > 0;
             self.registers.accumulator <<= 1;
             if (self.flags.carry) {
@@ -689,15 +696,17 @@ pub fn step(self: *Self) Op {
         },
 
         .ROL_ZPG, .ROL_ZPX, .ROL_ABS, .ROL_ABX => {
+            self.cycles +%= 1;
             const address = self.get_instruction_address(switch (op) {
                 .ROL_ZPG => .ZPG,
                 .ROL_ZPX => .ZPX,
                 .ROL_ABS => .ABS,
-                .ROL_ABX => .ABX,
+                .ROL_ABX => .ABX_MAX_CYCLE,
                 else => unreachable,
             });
             const carry = self.memory[address] & 0b10000000 > 0;
             self.memory[address] <<= 1;
+            self.cycles +%= 2; // Get and set the memory value
             if (self.flags.carry) {
                 self.memory[address] |= 0b00000001;
             }
@@ -707,6 +716,7 @@ pub fn step(self: *Self) Op {
         },
 
         .ROR => {
+            self.cycles +%= 1;
             const carry = self.registers.accumulator & 0b00000001 > 0;
             self.registers.accumulator >>= 1;
             if (self.flags.carry) {
@@ -717,15 +727,17 @@ pub fn step(self: *Self) Op {
         },
 
         .ROR_ZPG, .ROR_ZPX, .ROR_ABS, .ROR_ABX => {
+            self.cycles +%= 1;
             const address = self.get_instruction_address(switch (op) {
                 .ROR_ZPG => .ZPG,
                 .ROR_ZPX => .ZPX,
                 .ROR_ABS => .ABS,
-                .ROR_ABX => .ABX,
+                .ROR_ABX => .ABX_MAX_CYCLE,
                 else => unreachable,
             });
             const carry = self.memory[address] & 0b000000001 > 0;
             self.memory[address] >>= 1;
+            self.cycles +%= 2; // Get and set the memory value
             if (self.flags.carry) {
                 self.memory[address] |= 0b10000000;
             }
