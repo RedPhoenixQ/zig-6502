@@ -494,13 +494,15 @@ pub fn step(self: *Self) Op {
                 .ADC_IDY => .IDY,
                 else => unreachable,
             });
-            const before = self.registers.accumulator;
-            if (self.flags.carry) {
-                self.registers.accumulator +%= 1;
-            }
-            self.load_accumulator(self.registers.accumulator +% value);
-            self.flags.overflow = !Flags.test_negative(before) and self.flags.negative;
-            self.flags.carry = self.registers.accumulator < before;
+            const before: u16 = self.registers.accumulator;
+            const result: u16 = before + value + @intFromBool(self.flags.carry);
+            // std.debug.print("(({x:0>2} {x:0>2} {x:0>2}))", .{ before, value, result });
+            // https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
+            // Disch's solution: https://forums.nesdev.org/viewtopic.php?t=6331
+            self.flags.overflow = (before ^ result) & (value ^ result) & 0x80 > 0;
+            // http://apple1.chez.com/Apple1project/Docs/m6502/6502%20C64%20Programmer%20Guide.txt
+            self.flags.carry = result > 0xFF;
+            self.load_accumulator(@truncate(result));
         },
 
         .SBC_IMM, .SBC_ZPG, .SBC_ZPX, .SBC_ABS, .SBC_ABX, .SBC_ABY, .SBC_IDX, .SBC_IDY => {
@@ -515,13 +517,19 @@ pub fn step(self: *Self) Op {
                 .SBC_IDY => .IDY,
                 else => unreachable,
             });
-            const before = self.registers.accumulator;
-            if (self.flags.carry) {
-                self.registers.accumulator -%= 1;
-            }
-            self.load_accumulator(self.registers.accumulator -% value);
-            self.flags.overflow = Flags.test_negative(before) and !self.flags.negative;
-            self.flags.carry = self.registers.accumulator > before;
+            const carry_in = self.flags.carry;
+            const before: u16 = self.registers.accumulator;
+            // http://forum.6502.org/viewtopic.php?t=18
+            // Removes one when the carry flag is CLEAR
+            const result: u16 = before -% value -% @intFromBool(!carry_in);
+            // std.debug.print("(({x:0>2} {x:0>2} {x:0>2}))", .{ before, value, result });
+            // https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
+            self.flags.overflow = (before ^ result) & (before ^ value) & 0x80 > 0;
+            // 6502 is opposite to industry standard and sets carry when AC is smaller than the operand.
+            // It's an "not borrow" flag
+            // http://apple1.chez.com/Apple1project/Docs/m6502/6502%20C64%20Programmer%20Guide.txt
+            self.flags.carry = result < 0x100;
+            self.load_accumulator(@truncate(result));
         },
 
         .CMP_IMM, .CMP_ZPG, .CMP_ZPX, .CMP_ABS, .CMP_ABX, .CMP_ABY, .CMP_IDX, .CMP_IDY => {
