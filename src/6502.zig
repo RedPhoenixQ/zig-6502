@@ -825,23 +825,31 @@ fn store(self: *Self, register: std.meta.FieldEnum(Registers), address: u16) voi
     };
 }
 
-fn get_address(self: *Self, address: u16, mode: AddressingMode) u16 {
-    return switch (mode) {
-        .ZPG => blk: {
-            std.debug.assert(address <= 0xFF);
-            break :blk address;
+/// https://www.nesdev.org/wiki/CPU_addressing_modes
+fn get_address(self: *Self, input: u16, mode: AddressingMode) u16 {
+    const address = switch (mode) {
+        .ZPG => input,
+        .ZPX => (@as(u8, @intCast(input)) +% self.registers.x),
+        .ZPY => (@as(u8, @intCast(input)) +% self.registers.y),
+        .ABS => input,
+        .ABX => input +% self.registers.x,
+        .ABY => input +% self.registers.y,
+        .IND => self.fetch_u16(input),
+        .IDX => blk: {
+            const low: u16 = self.fetch_u8((input + self.registers.x) % 256);
+            const high: u16 = self.fetch_u8((input + self.registers.x + 1) % 256);
+            break :blk (high << 8) + low;
+            // break :blk self.fetch_u16(input + self.registers.x);
         },
-        .ZPX => (@as(u8, @intCast(address)) +% self.registers.x),
-        .ZPY => (@as(u8, @intCast(address)) +% self.registers.y),
-        .ABS => address,
-        .ABX => address +% self.registers.x,
-        .ABY => address +% self.registers.y,
-        .IND => self.fetch_u16(address),
-        .IDX => self.fetch_u16(address +% self.registers.x),
         // http://forum.6502.org/viewtopic.php?f=2&t=2195#p19862
-        .IDY => self.fetch_u16(address) +% self.registers.y,
+        .IDY => blk: {
+            const low: u16 = self.fetch_u8(input);
+            const high: u16 = self.fetch_u8((input + 1) % 256);
+            break :blk (high << 8) + low + self.registers.y;
+            // break :blk self.fetch_u16(input) + self.registers.y;
+        },
         .REL => blk: {
-            const relative = @as(i8, @bitCast(@as(u8, @intCast(address))));
+            const relative = @as(i8, @bitCast(@as(u8, @intCast(input))));
             std.debug.print("relative {}\n", .{relative});
             if (relative < 0) {
                 break :blk self.registers.program_counter - @abs(relative);
@@ -850,6 +858,7 @@ fn get_address(self: *Self, address: u16, mode: AddressingMode) u16 {
             }
         },
     };
+    return address;
 }
 
 fn get_current_stack_address(self: *Self) u16 {
