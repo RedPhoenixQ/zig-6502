@@ -554,81 +554,105 @@ test "RTI" {
 
 test "BCC" {
     var t: TestCPU = .{};
+    t.cpu.flags.carry = true;
     try t.test_op(.BCC_REL);
     // +1 if branch succeeds
     t.extra_cycles = 1;
+    t.cpu.flags.carry = false;
     try t.test_op(.BCC_REL);
     // +2 if to a new page
     t.extra_cycles = 2;
+    t.set_op_param(0x69);
     try t.test_op(.BCC_REL);
 }
 test "BCS" {
     var t: TestCPU = .{};
+    t.cpu.flags.carry = false;
     try t.test_op(.BCS_REL);
     // +1 if branch succeeds
     t.extra_cycles = 1;
+    t.cpu.flags.carry = true;
     try t.test_op(.BCS_REL);
     // +2 if to a new page
     t.extra_cycles = 2;
+    t.set_op_param(0x69);
     try t.test_op(.BCS_REL);
 }
 test "BEQ" {
     var t: TestCPU = .{};
+    t.cpu.flags.zero = false;
     try t.test_op(.BEQ_REL);
     // +1 if branch succeeds
     t.extra_cycles = 1;
+    t.cpu.flags.zero = true;
     try t.test_op(.BEQ_REL);
     // +2 if to a new page
     t.extra_cycles = 2;
+    t.set_op_param(0x69);
     try t.test_op(.BEQ_REL);
 }
 test "BMI" {
     var t: TestCPU = .{};
+    t.cpu.flags.negative = false;
     try t.test_op(.BMI_REL);
     // +1 if branch succeeds
     t.extra_cycles = 1;
+    t.cpu.flags.negative = true;
     try t.test_op(.BMI_REL);
     // +2 if to a new page
     t.extra_cycles = 2;
+    t.set_op_param(0x69);
     try t.test_op(.BMI_REL);
 }
 test "BNE" {
     var t: TestCPU = .{};
+    t.cpu.flags.zero = true;
     try t.test_op(.BNE_REL);
     // +1 if branch succeeds
     t.extra_cycles = 1;
+    t.cpu.flags.zero = false;
     try t.test_op(.BNE_REL);
     // +2 if to a new page
     t.extra_cycles = 2;
+    t.set_op_param(0x69);
     try t.test_op(.BNE_REL);
 }
 test "BPL" {
     var t: TestCPU = .{};
+    t.cpu.flags.negative = true;
     try t.test_op(.BPL_REL);
     // +1 if branch succeeds
     t.extra_cycles = 1;
+    t.cpu.flags.negative = false;
     try t.test_op(.BPL_REL);
     // +2 if to a new page
     t.extra_cycles = 2;
+    t.set_op_param(0x69);
     try t.test_op(.BPL_REL);
 }
 test "BVC" {
     var t: TestCPU = .{};
+    t.cpu.flags.overflow = true;
     try t.test_op(.BVC_REL);
     // +1 if branch succeeds
     t.extra_cycles = 1;
+    t.cpu.flags.overflow = false;
     try t.test_op(.BVC_REL);
     // +2 if to a new page
     t.extra_cycles = 2;
+    t.set_op_param(0x69);
     try t.test_op(.BVC_REL);
 }
 test "BVS" {
     var t: TestCPU = .{};
+    t.cpu.flags.overflow = false;
     try t.test_op(.BVS_REL);
     // +1 if branch succeeds
     t.extra_cycles = 1;
+    t.cpu.flags.overflow = true;
     try t.test_op(.BVS_REL);
     // +2 if to a new page
     t.extra_cycles = 2;
+    t.set_op_param(0x69);
     try t.test_op(.BVS_REL);
 }
