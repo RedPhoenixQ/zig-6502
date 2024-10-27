@@ -2,6 +2,13 @@ const std = @import("std");
 
 const Self = @This();
 
+pub const LogScope = .cpu6502;
+pub const StackScope = .cpu6502Stack;
+pub const ZeroPageScope = .cpu6502ZeroPage;
+const Log = std.log.scoped(LogScope);
+const StackLog = std.log.scoped(StackScope);
+const ZeroPageLog = std.log.scoped(ZeroPageScope);
+
 // Registers
 // http://www.6502.org/users/obelisk/6502/registers.html
 
@@ -384,6 +391,26 @@ pub fn reset(self: *Self) void {
 pub fn step(self: *Self) Op {
     const program_counter_before = self.registers.program_counter;
     const op: Op = @enumFromInt(self.next_program_u8());
+    Log.info("({: >9}) {x:0>4} {x:0>2}: {s:<8} {:.0} {:.0}", .{ self.cycles, program_counter_before + 1, self.memory[program_counter_before + 1 .. program_counter_before + 3], @tagName(op), self.registers, self.flags });
+    if (self.registers.stack_pointer < 0xFF) {
+        StackLog.debug("{x:0>2}", .{self.memory[@as(u16, Self.STACK_START) + self.registers.stack_pointer + 1 .. Self.STACK_START + 0xFF + 1]});
+    }
+    ZeroPageLog.debug("[00..0F]: {x:0>2}", .{self.memory[0x00..0x10]});
+    ZeroPageLog.debug("[10..1F]: {x:0>2}", .{self.memory[0x10..0x20]});
+    ZeroPageLog.debug("[20..2F]: {x:0>2}", .{self.memory[0x20..0x30]});
+    ZeroPageLog.debug("[30..3F]: {x:0>2}", .{self.memory[0x30..0x40]});
+    ZeroPageLog.debug("[40..4F]: {x:0>2}", .{self.memory[0x40..0x50]});
+    ZeroPageLog.debug("[50..5F]: {x:0>2}", .{self.memory[0x50..0x60]});
+    ZeroPageLog.debug("[60..6F]: {x:0>2}", .{self.memory[0x60..0x70]});
+    ZeroPageLog.debug("[70..7F]: {x:0>2}", .{self.memory[0x70..0x80]});
+    ZeroPageLog.debug("[80..8F]: {x:0>2}", .{self.memory[0x80..0x90]});
+    ZeroPageLog.debug("[90..9F]: {x:0>2}", .{self.memory[0x90..0xA0]});
+    ZeroPageLog.debug("[A0..AF]: {x:0>2}", .{self.memory[0xA0..0xB0]});
+    ZeroPageLog.debug("[B0..BF]: {x:0>2}", .{self.memory[0xB0..0xC0]});
+    ZeroPageLog.debug("[C0..CF]: {x:0>2}", .{self.memory[0xC0..0xD0]});
+    ZeroPageLog.debug("[D0..DF]: {x:0>2}", .{self.memory[0xD0..0xE0]});
+    ZeroPageLog.debug("[E0..EF]: {x:0>2}", .{self.memory[0xE0..0xF0]});
+    ZeroPageLog.debug("[F0..FF]: {x:0>2}", .{self.memory[0xF0..0x100]});
 
     switch (op) {
         .LDA_IMM, .LDA_ZPG, .LDA_ZPX, .LDA_ABS, .LDA_ABX, .LDA_ABY, .LDA_IDX, .LDA_IDY => self.load_accumulator(self.fetch_instruction_data(switch (op) {
@@ -530,7 +557,7 @@ pub fn step(self: *Self) Op {
             });
             const before: u16 = self.registers.accumulator;
             const result: u16 = before + value + @intFromBool(self.flags.carry);
-            // std.debug.print("(({x:0>2} {x:0>2} {x:0>2}))", .{ before, value, result });
+            Log.debug("{x:0>2} + {x:0>2} + {} = {x:0>2}", .{ before, value, @intFromBool(self.flags.carry), result });
             // https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
             // Disch's solution: https://forums.nesdev.org/viewtopic.php?t=6331
             self.flags.overflow = (before ^ result) & (value ^ result) & 0x80 > 0;
@@ -556,7 +583,7 @@ pub fn step(self: *Self) Op {
             // http://forum.6502.org/viewtopic.php?t=18
             // Removes one when the carry flag is CLEAR
             const result: u16 = before -% value -% @intFromBool(!carry_in);
-            // std.debug.print("(({x:0>2} {x:0>2} {x:0>2}))", .{ before, value, result });
+            Log.debug("{x:0>2} - {x:0>2} - {} = {x:0>2}", .{ before, value, @intFromBool(!self.flags.carry), result });
             // https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
             self.flags.overflow = (before ^ result) & (before ^ value) & 0x80 > 0;
             // 6502 is opposite to industry standard and sets carry when AC is smaller than the operand.
@@ -578,7 +605,7 @@ pub fn step(self: *Self) Op {
                 .CMP_IDY => .IDY,
                 else => unreachable,
             });
-            // std.debug.print("Comparing value: {x:0>2}\n", .{value});
+            Log.debug("Comparing value: {x:0>2}", .{value});
             self.flags.carry = self.registers.accumulator >= value;
             self.flags.zero = self.registers.accumulator == value;
             self.flags.set_negative(self.registers.accumulator -% value);
@@ -591,6 +618,7 @@ pub fn step(self: *Self) Op {
                 .CPX_ABS => .ABS,
                 else => unreachable,
             });
+            Log.debug("Comparing value: {x:0>2}", .{value});
             self.flags.carry = self.registers.x >= value;
             self.flags.zero = self.registers.x == value;
             self.flags.set_negative(self.registers.x -% value);
@@ -603,6 +631,7 @@ pub fn step(self: *Self) Op {
                 .CPY_ABS => .ABS,
                 else => unreachable,
             });
+            Log.debug("Comparing value: {x:0>2}", .{value});
             self.flags.carry = self.registers.y >= value;
             self.flags.zero = self.registers.y == value;
             self.flags.set_negative(self.registers.y -% value);
@@ -617,6 +646,7 @@ pub fn step(self: *Self) Op {
                 else => unreachable,
             });
             self.memory[address] +%= 1;
+            Log.debug("[{}]: {x:0>2}", .{ address, self.memory[address] });
             self.flags.set_negative(self.memory[address]);
             self.flags.set_zero(self.memory[address]);
         },
@@ -633,6 +663,7 @@ pub fn step(self: *Self) Op {
                 else => unreachable,
             });
             self.memory[address] -%= 1;
+            Log.debug("[{}]: {x:0>2}", .{ address, self.memory[address] });
             self.flags.set_negative(self.memory[address]);
             self.flags.set_zero(self.memory[address]);
         },
@@ -658,6 +689,7 @@ pub fn step(self: *Self) Op {
             self.flags.carry = self.memory[address] & 0b10000000 > 0;
             self.memory[address] <<= 1;
             self.cycles +%= 2; // Get and set the memory value
+            Log.debug("[{}]: {x:0>2}", .{ address, self.memory[address] });
             self.flags.set_zero(self.memory[address]);
             self.flags.set_negative(self.memory[address]);
         },
@@ -680,6 +712,7 @@ pub fn step(self: *Self) Op {
             self.flags.carry = self.memory[address] & 0b1 > 0;
             self.memory[address] >>= 1;
             self.cycles +%= 2; // Get and set the memory value
+            Log.debug("[{}]: {x:0>2}", .{ address, self.memory[address] });
             self.flags.set_zero(self.memory[address]);
             self.flags.set_negative(self.memory[address]);
         },
@@ -710,6 +743,7 @@ pub fn step(self: *Self) Op {
             if (self.flags.carry) {
                 self.memory[address] |= 0b00000001;
             }
+            Log.debug("[{}]: {x:0>2}", .{ address, self.memory[address] });
             self.flags.carry = carry;
             self.flags.set_zero(self.memory[address]);
             self.flags.set_negative(self.memory[address]);
@@ -741,6 +775,7 @@ pub fn step(self: *Self) Op {
             if (self.flags.carry) {
                 self.memory[address] |= 0b10000000;
             }
+            Log.debug("[{}]: {x:0>2}", .{ address, self.memory[address] });
             self.flags.carry = carry;
             self.flags.set_zero(self.memory[address]);
             self.flags.set_negative(self.memory[address]);
@@ -916,7 +951,6 @@ fn get_address(self: *Self, input: u16, mode: AddressingMode) u16 {
         },
         .REL => blk: {
             const relative = @as(i8, @bitCast(@as(u8, @intCast(input))));
-            // std.debug.print("relative {}\n", .{relative});
             var address = self.registers.program_counter;
             if (relative < 0) {
                 address -%= @abs(relative);
@@ -928,7 +962,7 @@ fn get_address(self: *Self, input: u16, mode: AddressingMode) u16 {
             break :blk address;
         },
     };
-    // std.debug.print("get_address {x:4>0} {0b:0>16} ({})\n", .{ address, address & 0xFF == 0xFF });
+    Log.debug("get_address: {x:0>4} ({0b:0>16})", .{address});
     return address;
 }
 
@@ -983,24 +1017,11 @@ test "functional test" {
     const test_binary = @embedFile("./tests/6502_functional_test.bin");
     var cpu: Self = .{};
     @memcpy(cpu.memory[BIN_START_ADDRESS..], test_binary[0..]);
-    // cpu.memory[0x0200] = 0x27;
     cpu.registers.program_counter = CODE_START_ADDRESS - 1;
 
-    for (0..0xFFFFFFFF) |_| {
-        // if (i % 0xFFFF == 0) {
-        //     std.debug.print("{:.0} {:.0}\n", .{ cpu.registers, cpu.flags });
-        // }
-        // std.debug.print("{x:0>4} {x:0>2}: ", .{ pg, cpu.memory[pg .. pg + 3] });
-        const pg = cpu.registers.program_counter + 1;
-        if (pg == SUCCESS_TRAP_ADDRESS) return;
+    var iteratons: u32 = 0;
+    while (cpu.registers.program_counter + 1 != SUCCESS_TRAP_ADDRESS) : (iteratons += 1) {
+        if (iteratons > 0xFFFFFFFF) return .TooManyIterations;
         _ = cpu.step();
-        // switch (cpu.step()) {
-        //     .NOP => |op| std.debug.print("{s:<8}\n", .{@tagName(op)}),
-        //     else => |op| std.debug.print("{s:<8} {:.0} {:.0}\n", .{ @tagName(op), cpu.registers, cpu.flags }),
-        // }
-        // std.debug.print("{x:0>2} {x:0>2}\n", .{ cpu.memory[0x0026..0x003E], cpu.memory[0x0203..0x0210] });
-        // if (cpu.registers.stack_pointer < 0xFF) {
-        //     std.debug.print("Stack: {x:0>2}\n", .{cpu.memory[@as(u16, CPU.STACK_START) + cpu.registers.stack_pointer + 1 .. CPU.STACK_START + 0xFF + 1]});
-        // }
     }
 }
