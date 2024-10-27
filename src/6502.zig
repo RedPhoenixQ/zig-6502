@@ -433,38 +433,38 @@ pub fn step(self: *Self) Op {
         .STY_ABS => self.store(self.registers.y, self.get_instruction_address(.ABS)),
 
         .TAX => {
-            self.cycles += 1;
+            self.cycles +%= 1;
             self.load_x(self.registers.accumulator);
         },
         .TAY => {
-            self.cycles += 1;
+            self.cycles +%= 1;
             self.load_y(self.registers.accumulator);
         },
         .TXA => {
-            self.cycles += 1;
+            self.cycles +%= 1;
             self.load_accumulator(self.registers.x);
         },
         .TYA => {
-            self.cycles += 1;
+            self.cycles +%= 1;
             self.load_accumulator(self.registers.y);
         },
 
         .TSX => {
-            self.cycles += 1;
+            self.cycles +%= 1;
             self.load_x(self.registers.stack_pointer);
         },
         .TXS => {
-            self.cycles += 1;
+            self.cycles +%= 1;
             self.registers.stack_pointer = self.registers.x;
         },
         .PHA => self.push(self.registers.accumulator),
         .PHP => self.push_flags(),
         .PLA => {
-            self.cycles += 1;
+            self.cycles +%= 1;
             self.load_accumulator(self.pop());
         },
         .PLP => {
-            self.cycles += 1;
+            self.cycles +%= 1;
             self.pop_flags();
         },
 
@@ -823,12 +823,12 @@ fn get_instruction_address(self: *Self, mode: AddressingMode) u16 {
 }
 
 fn fetch_u8(self: *Self, address: u16) u8 {
-    self.cycles += 1;
+    self.cycles +%= 1;
     return self.memory[address];
 }
 
 fn fetch_u16(self: *Self, address: u16) u16 {
-    self.cycles += 2;
+    self.cycles +%= 2;
     return std.mem.readInt(u16, @as(*[2]u8, @ptrCast(self.memory[address..])), .little);
     // const low: u16 = @intCast(self.fetch_u8(address));
     // const high: u16 = @intCast(self.fetch_u8(address + 1));
@@ -857,7 +857,7 @@ fn load_y(self: *Self, value: u8) void {
 }
 
 fn store(self: *Self, value: u8, address: u16) void {
-    self.cycles += 1;
+    self.cycles +%= 1;
     self.memory[address] = value;
 }
 
@@ -866,27 +866,27 @@ fn get_address(self: *Self, input: u16, mode: AddressingMode) u16 {
     const address = switch (mode) {
         .ZPG => input,
         .ZPX => blk: {
-            self.cycles += 1;
+            self.cycles +%= 1;
             break :blk (@as(u8, @intCast(input)) +% self.registers.x);
         },
         .ZPY => blk: {
-            self.cycles += 1;
+            self.cycles +%= 1;
             break :blk (@as(u8, @intCast(input)) +% self.registers.y);
         },
         .ABS => input,
         .ABX, .ABX_MAX_CYCLE => blk: {
             // +1 if page cross (if address + 1 goes into the next 256 byte area)
-            if (input & 0xFF == 0xFF or mode == .ABX_MAX_CYCLE) self.cycles += 1; // For high byte carry increment
+            if (input & 0xFF == 0xFF or mode == .ABX_MAX_CYCLE) self.cycles +%= 1; // For high byte carry increment
             break :blk input +% self.registers.x;
         },
         .ABY, .ABY_MAX_CYCLE => blk: {
             // +1 if page cross (if address + 1 goes into the next 256 byte area)
-            if (input & 0xFF == 0xFF or mode == .ABY_MAX_CYCLE) self.cycles += 1; // For high byte carry increment
+            if (input & 0xFF == 0xFF or mode == .ABY_MAX_CYCLE) self.cycles +%= 1; // For high byte carry increment
             break :blk input +% self.registers.y;
         },
         .IND => self.fetch_u16(input),
         .IDX => blk: {
-            self.cycles += 1; // For high byte addition
+            self.cycles +%= 1; // For high byte addition
             const low: u16 = self.fetch_u8((input + self.registers.x) % 256);
             const high: u16 = self.fetch_u8((input + self.registers.x + 1) % 256);
             break :blk (high << 8) + low;
@@ -895,7 +895,7 @@ fn get_address(self: *Self, input: u16, mode: AddressingMode) u16 {
         // http://forum.6502.org/viewtopic.php?f=2&t=2195#p19862
         .IDY, .IDY_MAX_CYCLE => blk: {
             // +1 if page cross (if address + 1 goes into the next 256 byte area)
-            if (input & 0xFF == 0xFF or mode == .IDY_MAX_CYCLE) self.cycles += 1; // For high byte carry increment
+            if (input & 0xFF == 0xFF or mode == .IDY_MAX_CYCLE) self.cycles +%= 1; // For high byte carry increment
             const low: u16 = self.fetch_u8(input);
             const high: u16 = self.fetch_u8((input + 1) % 256);
             break :blk (high << 8) + low + self.registers.y;
@@ -932,9 +932,9 @@ fn push_flags(self: *Self) void {
 }
 
 fn push(self: *Self, value: u8) void {
-    self.cycles += 1;
+    self.cycles +%= 1;
     self.memory[self.get_current_stack_address()] = value;
-    self.cycles += 1;
+    self.cycles +%= 1;
     self.registers.stack_pointer -%= 1;
 }
 
@@ -949,9 +949,9 @@ fn pop_flags(self: *Self) void {
 }
 
 fn pop(self: *Self) u8 {
-    self.cycles += 1;
+    self.cycles +%= 1;
     self.registers.stack_pointer +%= 1;
-    self.cycles += 1;
+    self.cycles +%= 1;
     return self.memory[self.get_current_stack_address()];
 }
 
