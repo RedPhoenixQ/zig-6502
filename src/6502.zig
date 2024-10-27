@@ -459,8 +459,14 @@ pub fn step(self: *Self) Op {
         },
         .PHA => self.push(self.registers.accumulator),
         .PHP => self.push_flags(),
-        .PLA => self.load_accumulator(self.pop()),
-        .PLP => self.pop_flags(),
+        .PLA => {
+            self.cycles += 1;
+            self.load_accumulator(self.pop());
+        },
+        .PLP => {
+            self.cycles += 1;
+            self.pop_flags();
+        },
 
         .AND_IMM, .AND_ZPG, .AND_ZPX, .AND_ABS, .AND_ABX, .AND_ABY, .AND_IDX, .AND_IDY => self.load_accumulator(self.registers.accumulator & self.fetch_instruction_data(switch (op) {
             .AND_IMM => null,
@@ -926,7 +932,9 @@ fn push_flags(self: *Self) void {
 }
 
 fn push(self: *Self, value: u8) void {
+    self.cycles += 1;
     self.memory[self.get_current_stack_address()] = value;
+    self.cycles += 1;
     self.registers.stack_pointer -%= 1;
 }
 
@@ -941,7 +949,9 @@ fn pop_flags(self: *Self) void {
 }
 
 fn pop(self: *Self) u8 {
+    self.cycles += 1;
     self.registers.stack_pointer +%= 1;
+    self.cycles += 1;
     return self.memory[self.get_current_stack_address()];
 }
 
@@ -994,6 +1004,10 @@ test "cycle times" {
 
         .{ .op = .TSX, .cycles = 2 },
         .{ .op = .TXS, .cycles = 2 },
+        .{ .op = .PHA, .cycles = 3 },
+        .{ .op = .PHP, .cycles = 3 },
+        .{ .op = .PLA, .cycles = 4 },
+        .{ .op = .PLP, .cycles = 4 },
     };
 
     var cpu: Self = .{};
