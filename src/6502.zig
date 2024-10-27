@@ -124,10 +124,16 @@ pub const AddressingMode = enum(u4) {
     ZPY,
     ABS,
     ABX,
+    /// Will always take the max cycles
+    ABX_MAX_CYCLE,
     ABY,
+    /// Will always take the max cycles
+    ABY_MAX_CYCLE,
     IND,
     IDX,
     IDY,
+    /// Will always take the max cycles
+    IDY_MAX_CYCLE,
     REL,
 };
 
@@ -367,9 +373,12 @@ registers: Registers = .{},
 flags: Flags = .{},
 memory: Memory = [_]u8{0} ** 0x10000,
 
+cycles: u32 = 0,
+
 pub fn reset(self: *Self) void {
     self.flags = .{};
     self.registers.program_counter = self.fetch_u16(POWER_ON_RESET_ADDRESS);
+    self.cycles = 0;
 }
 
 pub fn step(self: *Self) Op {
@@ -407,29 +416,47 @@ pub fn step(self: *Self) Op {
             else => unreachable,
         })),
 
-        .STA_ZPG => self.memory[self.get_instruction_address(.ZPG)] = self.registers.accumulator,
-        .STA_ZPX => self.memory[self.get_instruction_address(.ZPX)] = self.registers.accumulator,
-        .STA_ABS => self.memory[self.get_instruction_address(.ABS)] = self.registers.accumulator,
-        .STA_ABX => self.memory[self.get_instruction_address(.ABX)] = self.registers.accumulator,
-        .STA_ABY => self.memory[self.get_instruction_address(.ABY)] = self.registers.accumulator,
-        .STA_IDX => self.memory[self.get_instruction_address(.IDX)] = self.registers.accumulator,
-        .STA_IDY => self.memory[self.get_instruction_address(.IDY)] = self.registers.accumulator,
+        .STA_ZPG => self.store(self.registers.accumulator, self.get_instruction_address(.ZPG)),
+        .STA_ZPX => self.store(self.registers.accumulator, self.get_instruction_address(.ZPX)),
+        .STA_ABS => self.store(self.registers.accumulator, self.get_instruction_address(.ABS)),
+        .STA_ABX => self.store(self.registers.accumulator, self.get_instruction_address(.ABX_MAX_CYCLE)),
+        .STA_ABY => self.store(self.registers.accumulator, self.get_instruction_address(.ABY_MAX_CYCLE)),
+        .STA_IDX => self.store(self.registers.accumulator, self.get_instruction_address(.IDX)),
+        .STA_IDY => self.store(self.registers.accumulator, self.get_instruction_address(.IDY_MAX_CYCLE)),
 
-        .STX_ZPG => self.memory[self.get_instruction_address(.ZPG)] = self.registers.x,
-        .STX_ZPY => self.memory[self.get_instruction_address(.ZPY)] = self.registers.x,
-        .STX_ABS => self.memory[self.get_instruction_address(.ABS)] = self.registers.x,
+        .STX_ZPG => self.store(self.registers.x, self.get_instruction_address(.ZPG)),
+        .STX_ZPY => self.store(self.registers.x, self.get_instruction_address(.ZPY)),
+        .STX_ABS => self.store(self.registers.x, self.get_instruction_address(.ABS)),
 
-        .STY_ZPG => self.memory[self.get_instruction_address(.ZPG)] = self.registers.y,
-        .STY_ZPX => self.memory[self.get_instruction_address(.ZPX)] = self.registers.y,
-        .STY_ABS => self.memory[self.get_instruction_address(.ABS)] = self.registers.y,
+        .STY_ZPG => self.store(self.registers.y, self.get_instruction_address(.ZPG)),
+        .STY_ZPX => self.store(self.registers.y, self.get_instruction_address(.ZPX)),
+        .STY_ABS => self.store(self.registers.y, self.get_instruction_address(.ABS)),
 
-        .TAX => self.load_x(self.registers.accumulator),
-        .TAY => self.load_y(self.registers.accumulator),
-        .TXA => self.load_accumulator(self.registers.x),
-        .TYA => self.load_accumulator(self.registers.y),
+        .TAX => {
+            self.cycles += 1;
+            self.load_x(self.registers.accumulator);
+        },
+        .TAY => {
+            self.cycles += 1;
+            self.load_y(self.registers.accumulator);
+        },
+        .TXA => {
+            self.cycles += 1;
+            self.load_accumulator(self.registers.x);
+        },
+        .TYA => {
+            self.cycles += 1;
+            self.load_accumulator(self.registers.y);
+        },
 
-        .TSX => self.load_x(self.registers.stack_pointer),
-        .TXS => self.registers.stack_pointer = self.registers.x,
+        .TSX => {
+            self.cycles += 1;
+            self.load_x(self.registers.stack_pointer);
+        },
+        .TXS => {
+            self.cycles += 1;
+            self.registers.stack_pointer = self.registers.x;
+        },
         .PHA => self.push(self.registers.accumulator),
         .PHP => self.push_flags(),
         .PLA => self.load_accumulator(self.pop()),
@@ -784,16 +811,18 @@ fn fetch_instruction_data(self: *Self, maybe_address: ?AddressingMode) u8 {
 
 fn get_instruction_address(self: *Self, mode: AddressingMode) u16 {
     return self.get_address(switch (mode) {
-        .ABS, .ABX, .ABY, .IND => self.next_program_u16(),
+        .ABS, .ABX, .ABX_MAX_CYCLE, .ABY, .ABY_MAX_CYCLE, .IND => self.next_program_u16(),
         else => @intCast(self.next_program_u8()),
     }, mode);
 }
 
 fn fetch_u8(self: *Self, address: u16) u8 {
+    self.cycles += 1;
     return self.memory[address];
 }
 
 fn fetch_u16(self: *Self, address: u16) u16 {
+    self.cycles += 2;
     return std.mem.readInt(u16, @as(*[2]u8, @ptrCast(self.memory[address..])), .little);
     // const low: u16 = @intCast(self.fetch_u8(address));
     // const high: u16 = @intCast(self.fetch_u8(address + 1));
@@ -821,32 +850,46 @@ fn load_y(self: *Self, value: u8) void {
     self.registers.y = value;
 }
 
-fn store(self: *Self, register: std.meta.FieldEnum(Registers), address: u16) void {
-    self.memory[address] = switch (register) {
-        .accumulator => self.registers.accumulator,
-        .x => self.registers.x,
-        .y => self.registers.y,
-    };
+fn store(self: *Self, value: u8, address: u16) void {
+    self.cycles += 1;
+    self.memory[address] = value;
 }
 
 /// https://www.nesdev.org/wiki/CPU_addressing_modes
 fn get_address(self: *Self, input: u16, mode: AddressingMode) u16 {
     const address = switch (mode) {
         .ZPG => input,
-        .ZPX => (@as(u8, @intCast(input)) +% self.registers.x),
-        .ZPY => (@as(u8, @intCast(input)) +% self.registers.y),
+        .ZPX => blk: {
+            self.cycles += 1;
+            break :blk (@as(u8, @intCast(input)) +% self.registers.x);
+        },
+        .ZPY => blk: {
+            self.cycles += 1;
+            break :blk (@as(u8, @intCast(input)) +% self.registers.y);
+        },
         .ABS => input,
-        .ABX => input +% self.registers.x,
-        .ABY => input +% self.registers.y,
+        .ABX, .ABX_MAX_CYCLE => blk: {
+            // +1 if page cross (if address + 1 goes into the next 256 byte area)
+            if (input & 0xFF == 0xFF or mode == .ABX_MAX_CYCLE) self.cycles += 1; // For high byte carry increment
+            break :blk input +% self.registers.x;
+        },
+        .ABY, .ABY_MAX_CYCLE => blk: {
+            // +1 if page cross (if address + 1 goes into the next 256 byte area)
+            if (input & 0xFF == 0xFF or mode == .ABY_MAX_CYCLE) self.cycles += 1; // For high byte carry increment
+            break :blk input +% self.registers.y;
+        },
         .IND => self.fetch_u16(input),
         .IDX => blk: {
+            self.cycles += 1; // For high byte addition
             const low: u16 = self.fetch_u8((input + self.registers.x) % 256);
             const high: u16 = self.fetch_u8((input + self.registers.x + 1) % 256);
             break :blk (high << 8) + low;
             // break :blk self.fetch_u16(input + self.registers.x);
         },
         // http://forum.6502.org/viewtopic.php?f=2&t=2195#p19862
-        .IDY => blk: {
+        .IDY, .IDY_MAX_CYCLE => blk: {
+            // +1 if page cross (if address + 1 goes into the next 256 byte area)
+            if (input & 0xFF == 0xFF or mode == .IDY_MAX_CYCLE) self.cycles += 1; // For high byte carry increment
             const low: u16 = self.fetch_u8(input);
             const high: u16 = self.fetch_u8((input + 1) % 256);
             break :blk (high << 8) + low + self.registers.y;
@@ -862,6 +905,7 @@ fn get_address(self: *Self, input: u16, mode: AddressingMode) u16 {
             }
         },
     };
+    std.debug.print("get_address {x:4>0} {0b:0>16} ({})\n", .{ address, address & 0xFF == 0xFF });
     return address;
 }
 
@@ -899,4 +943,73 @@ fn pop_flags(self: *Self) void {
 fn pop(self: *Self) u8 {
     self.registers.stack_pointer +%= 1;
     return self.memory[self.get_current_stack_address()];
+}
+
+test "cycle times" {
+    const Test = struct {
+        op: Op,
+        cycles: u4,
+        /// Little endian (low byte first)
+        bytes: [2]u8 = .{ 0x11, 0x11 },
+    };
+    const OPS_AND_CYCLES = [_]Test{
+        .{ .op = .LDA_IMM, .cycles = 2 },
+        .{ .op = .LDA_ZPG, .cycles = 3 },
+        .{ .op = .LDA_ZPX, .cycles = 4 },
+        .{ .op = .LDA_ABS, .cycles = 4 },
+        .{ .op = .LDA_ABX, .cycles = 4 }, // (+1 if page crossed)
+        .{ .op = .LDA_ABX, .cycles = 4 + 1, .bytes = .{ 0xFF, 0xF } }, // (+1 if page crossed)
+        .{ .op = .LDA_ABY, .cycles = 4 }, // (+1 if page crossed)
+        .{ .op = .LDA_ABY, .cycles = 4 + 1, .bytes = .{ 0xFF, 0xF } }, // (+1 if page crossed)
+        .{ .op = .LDA_IDX, .cycles = 6 },
+        .{ .op = .LDA_IDY, .cycles = 5 }, // (+1 if page crossed)
+        .{ .op = .LDA_IDY, .cycles = 5 + 1, .bytes = .{ 0xFF, 0xF } }, // (+1 if page crossed)
+
+        .{ .op = .LDX_IMM, .cycles = 2 },
+        .{ .op = .LDX_ZPG, .cycles = 3 },
+        .{ .op = .LDX_ZPY, .cycles = 4 },
+        .{ .op = .LDX_ABS, .cycles = 4 },
+        .{ .op = .LDX_ABY, .cycles = 4 }, // (+1 if page crossed)
+        .{ .op = .LDX_ABY, .cycles = 4 + 1, .bytes = .{ 0xFF, 0xF } }, // (+1 if page crossed)
+
+        .{ .op = .LDY_IMM, .cycles = 2 },
+        .{ .op = .LDY_ZPG, .cycles = 3 },
+        .{ .op = .LDY_ZPX, .cycles = 4 },
+        .{ .op = .LDY_ABS, .cycles = 4 },
+        .{ .op = .LDY_ABX, .cycles = 4 }, // (+1 if page crossed)
+        .{ .op = .LDY_ABX, .cycles = 4 + 1, .bytes = .{ 0xFF, 0xF } }, // (+1 if page crossed)
+
+        .{ .op = .STA_ZPG, .cycles = 3 },
+        .{ .op = .STA_ZPX, .cycles = 4 },
+        .{ .op = .STA_ABS, .cycles = 4 },
+        .{ .op = .STA_ABX, .cycles = 5 },
+        .{ .op = .STA_ABY, .cycles = 5 },
+        .{ .op = .STA_IDX, .cycles = 6 },
+        .{ .op = .STA_IDY, .cycles = 6 },
+
+        .{ .op = .TAX, .cycles = 2 },
+        .{ .op = .TAY, .cycles = 2 },
+        .{ .op = .TXA, .cycles = 2 },
+        .{ .op = .TYA, .cycles = 2 },
+
+        .{ .op = .TSX, .cycles = 2 },
+        .{ .op = .TXS, .cycles = 2 },
+    };
+
+    var cpu: Self = .{};
+    cpu.reset();
+    try std.testing.expectEqual(0, cpu.registers.program_counter);
+    for (OPS_AND_CYCLES) |t| {
+        cpu.reset();
+        cpu.memory[1] = @intFromEnum(t.op);
+        cpu.memory[2] = t.bytes[0];
+        cpu.memory[3] = t.bytes[1];
+        std.debug.print("op: {s} ({} {x:0>2})\n", .{ @tagName(t.op), cpu.registers.program_counter, cpu.memory[0..5] });
+        const op = cpu.step();
+        try std.testing.expectEqual(t.op, op);
+        std.testing.expectEqual(t.cycles, cpu.cycles) catch {
+            std.debug.print("{s} had incorrect cycles with bytes {x:0>2}\n", .{ @tagName(t.op), t.bytes });
+            return error.IncorrectCycles;
+        };
+    }
 }
