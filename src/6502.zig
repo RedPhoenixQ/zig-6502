@@ -546,6 +546,7 @@ pub fn step(self: *Self) Op {
                 .CMP_IDY => .IDY,
                 else => unreachable,
             });
+            std.debug.print("Comparing value: {x:0>2}\n", .{value});
             self.flags.carry = self.registers.accumulator >= value;
             self.flags.zero = self.registers.accumulator == value;
             self.flags.set_negative(self.registers.accumulator -% value);
@@ -646,12 +647,13 @@ pub fn step(self: *Self) Op {
         },
 
         .ROL => {
-            self.flags.carry = self.registers.accumulator & 0b10000000 > 0;
-            var value = self.registers.accumulator << 1;
+            const carry = self.registers.accumulator & 0b10000000 > 0;
+            self.registers.accumulator <<= 1;
             if (self.flags.carry) {
-                value |= 0b00000001;
+                self.registers.accumulator |= 0b00000001;
             }
-            self.load_accumulator(value);
+            self.flags.carry = carry;
+            self.load_accumulator(self.registers.accumulator);
         },
 
         .ROL_ZPG, .ROL_ZPX, .ROL_ABS, .ROL_ABX => {
@@ -662,22 +664,24 @@ pub fn step(self: *Self) Op {
                 .ROL_ABX => .ABX,
                 else => unreachable,
             });
-            self.flags.carry = self.memory[address] & 0b10000000 > 0;
+            const carry = self.memory[address] & 0b10000000 > 0;
             self.memory[address] <<= 1;
             if (self.flags.carry) {
                 self.memory[address] |= 0b00000001;
             }
+            self.flags.carry = carry;
             self.flags.set_zero(self.memory[address]);
             self.flags.set_negative(self.memory[address]);
         },
 
         .ROR => {
-            self.flags.carry = self.registers.accumulator & 0b00000001 > 0;
-            var value = self.registers.accumulator >> 1;
+            const carry = self.registers.accumulator & 0b00000001 > 0;
+            self.registers.accumulator >>= 1;
             if (self.flags.carry) {
-                value |= 0b10000000;
+                self.registers.accumulator |= 0b10000000;
             }
-            self.load_accumulator(value);
+            self.flags.carry = carry;
+            self.load_accumulator(self.registers.accumulator);
         },
 
         .ROR_ZPG, .ROR_ZPX, .ROR_ABS, .ROR_ABX => {
@@ -688,11 +692,12 @@ pub fn step(self: *Self) Op {
                 .ROR_ABX => .ABX,
                 else => unreachable,
             });
-            self.flags.carry = self.memory[address] & 0b1 > 0;
+            const carry = self.memory[address] & 0b000000001 > 0;
             self.memory[address] >>= 1;
             if (self.flags.carry) {
                 self.memory[address] |= 0b10000000;
             }
+            self.flags.carry = carry;
             self.flags.set_zero(self.memory[address]);
             self.flags.set_negative(self.memory[address]);
         },
