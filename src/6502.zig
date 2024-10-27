@@ -920,11 +920,12 @@ fn get_current_stack_address(self: *Self) u16 {
 }
 
 fn push_program_counter(self: *Self) void {
-    var bytes: [2]u8 = undefined;
-    std.mem.writeInt(u16, &bytes, self.registers.program_counter, .little);
-    // This handles SP overflows in the middle of the two bytes
-    self.push(bytes[1]);
-    self.push(bytes[0]);
+    self.registers.stack_pointer -= 1;
+    const address = self.get_current_stack_address();
+    self.registers.stack_pointer -= 1;
+    self.cycles +%= 1; // Only one stack pointer update cost should be paid
+    std.mem.writeInt(u16, @ptrCast(self.memory[address .. address + 2]), self.registers.program_counter, .little);
+    self.cycles +%= 2; // One cycle per byte read
 }
 
 fn push_flags(self: *Self) void {
@@ -939,9 +940,12 @@ fn push(self: *Self, value: u8) void {
 }
 
 fn pop_program_counter(self: *Self) void {
-    // This handles SP overflows in the middle of the two bytes
-    const bytes: [2]u8 = .{ self.pop(), self.pop() };
-    self.registers.program_counter = std.mem.readInt(u16, &bytes, .little);
+    self.registers.stack_pointer += 1;
+    const address = self.get_current_stack_address();
+    self.registers.stack_pointer += 1;
+    self.cycles +%= 1; // Only one stack pointer update cost should be paid
+    self.registers.program_counter = std.mem.readInt(u16, @ptrCast(self.memory[address .. address + 2]), .little);
+    self.cycles +%= 2; // One cycle per byte read
 }
 
 fn pop_flags(self: *Self) void {
