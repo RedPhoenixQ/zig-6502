@@ -911,7 +911,7 @@ fn get_address(self: *Self, input: u16, mode: AddressingMode) u16 {
             }
         },
     };
-    std.debug.print("get_address {x:4>0} {0b:0>16} ({})\n", .{ address, address & 0xFF == 0xFF });
+    // std.debug.print("get_address {x:4>0} {0b:0>16} ({})\n", .{ address, address & 0xFF == 0xFF });
     return address;
 }
 
