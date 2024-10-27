@@ -505,9 +505,7 @@ pub fn step(self: *Self) Op {
                 self.registers.accumulator +%= 1;
             }
             self.load_accumulator(self.registers.accumulator +% value);
-            if (!Flags.test_negative(before) and self.flags.negative) {
-                self.flags.overflow = true;
-            }
+            self.flags.overflow = !Flags.test_negative(before) and self.flags.negative;
             self.flags.carry = self.registers.accumulator < before;
         },
 
@@ -528,9 +526,7 @@ pub fn step(self: *Self) Op {
                 self.registers.accumulator -%= 1;
             }
             self.load_accumulator(self.registers.accumulator -% value);
-            if (Flags.test_negative(before) and !self.flags.negative) {
-                self.flags.overflow = true;
-            }
+            self.flags.overflow = Flags.test_negative(before) and !self.flags.negative;
             self.flags.carry = self.registers.accumulator > before;
         },
 
