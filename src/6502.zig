@@ -368,6 +368,7 @@ flags: Flags = .{},
 memory: Memory = [_]u8{0} ** 0x10000,
 
 pub fn reset(self: *Self) void {
+    self.flags = .{};
     self.registers.program_counter = self.fetch_u16(POWER_ON_RESET_ADDRESS);
 }
 
