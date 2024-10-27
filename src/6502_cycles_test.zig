@@ -22,12 +22,12 @@ const TestCPU = struct {
         self.cpu.cycles = 0;
         self.cpu.registers.program_counter = TestCPU.OP_ADDRESS - 1;
 
-        std.debug.print("op: {s} ({x:0>2})\n", .{ @tagName(op), self.cpu.memory[TestCPU.OP_ADDRESS .. TestCPU.OP_ADDRESS + 3] });
+        std.log.debug("op: {s} ({x:0>2})\n", .{ @tagName(op), self.cpu.memory[TestCPU.OP_ADDRESS .. TestCPU.OP_ADDRESS + 3] });
 
         const executed_op = self.cpu.step();
         try std.testing.expectEqual(op, executed_op);
         std.testing.expectEqual(CYCLES[@intFromEnum(op)] + self.extra_cycles, self.cpu.cycles) catch {
-            std.debug.print("{s} had incorrect cycles with bytes {x:0>2}\n", .{ @tagName(op), self.cpu.memory[TestCPU.OP_ADDRESS .. TestCPU.OP_ADDRESS + 3] });
+            std.log.err("{s} had incorrect cycles with bytes {x:0>2}\n", .{ @tagName(op), self.cpu.memory[TestCPU.OP_ADDRESS .. TestCPU.OP_ADDRESS + 3] });
             return error.IncorrectCycles;
         };
     }
