@@ -771,6 +771,7 @@ pub fn step(self: *Self) Op {
             const offset = self.next_program_u8();
             if (should_branch) {
                 self.registers.program_counter = self.get_address(offset, .REL);
+                self.cycles +%= 1;
             }
         },
 
@@ -916,11 +917,15 @@ fn get_address(self: *Self, input: u16, mode: AddressingMode) u16 {
         .REL => blk: {
             const relative = @as(i8, @bitCast(@as(u8, @intCast(input))));
             // std.debug.print("relative {}\n", .{relative});
+            var address = self.registers.program_counter;
             if (relative < 0) {
-                break :blk self.registers.program_counter - @abs(relative);
+                address -%= @abs(relative);
             } else {
-                break :blk self.registers.program_counter + @abs(relative);
+                address +%= @abs(relative);
             }
+            // Take extra cycle to increment high byte if it has changed
+            if (self.registers.program_counter & 0xFF00 != address & 0xFF00) self.cycles +%= 1;
+            break :blk address;
         },
     };
     // std.debug.print("get_address {x:4>0} {0b:0>16} ({})\n", .{ address, address & 0xFF == 0xFF });
