@@ -544,7 +544,7 @@ pub fn step(self: *Self) Op {
                 .CMP_IDY => .IDY,
                 else => unreachable,
             });
-            std.debug.print("Comparing value: {x:0>2}\n", .{value});
+            // std.debug.print("Comparing value: {x:0>2}\n", .{value});
             self.flags.carry = self.registers.accumulator >= value;
             self.flags.zero = self.registers.accumulator == value;
             self.flags.set_negative(self.registers.accumulator -% value);
@@ -853,7 +853,7 @@ fn get_address(self: *Self, input: u16, mode: AddressingMode) u16 {
         },
         .REL => blk: {
             const relative = @as(i8, @bitCast(@as(u8, @intCast(input))));
-            std.debug.print("relative {}\n", .{relative});
+            // std.debug.print("relative {}\n", .{relative});
             if (relative < 0) {
                 break :blk self.registers.program_counter - @abs(relative);
             } else {
