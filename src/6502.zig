@@ -734,10 +734,10 @@ pub fn step(self: *Self) Op {
             self.flags.set_negative(self.memory[address]);
         },
 
-        .JMP_ABS => self.registers.program_counter = self.get_instruction_address(.ABS) - 1,
-        .JMP_IND => self.registers.program_counter = self.get_instruction_address(.IND) - 1,
+        .JMP_ABS => self.registers.program_counter = self.get_instruction_address(.ABS) -% 1,
+        .JMP_IND => self.registers.program_counter = self.get_instruction_address(.IND) -% 1,
         .JSR_ABS => {
-            const subroutine_address = self.get_instruction_address(.ABS) - 1;
+            const subroutine_address = self.get_instruction_address(.ABS) -% 1;
             self.push_program_counter();
             self.registers.program_counter = subroutine_address;
         },
@@ -772,7 +772,7 @@ pub fn step(self: *Self) Op {
 
         .BRK => {
             // Add two to get the correct offset of the return address on the stack
-            self.registers.program_counter += 2;
+            self.registers.program_counter +%= 2;
             self.push_program_counter();
             self.push_flags();
             self.flags.break_command = true;
@@ -784,7 +784,7 @@ pub fn step(self: *Self) Op {
             self.pop_flags();
             self.pop_program_counter();
             // Remove one so that the next step with increment to the specified address
-            self.registers.program_counter -= 1;
+            self.registers.program_counter -%= 1;
         },
     }
 
@@ -796,14 +796,14 @@ pub fn step(self: *Self) Op {
 }
 
 fn next_program_u8(self: *Self) u8 {
-    self.registers.program_counter += 1;
+    self.registers.program_counter +%= 1;
     return self.fetch_u8(self.registers.program_counter);
 }
 
 fn next_program_u16(self: *Self) u16 {
-    self.registers.program_counter += 1;
+    self.registers.program_counter +%= 1;
     const out = self.fetch_u16(self.registers.program_counter);
-    self.registers.program_counter += 1;
+    self.registers.program_counter +%= 1;
     return out;
 }
 
