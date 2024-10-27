@@ -365,13 +365,7 @@ pub const Op = enum(u8) {
 
 registers: Registers = .{},
 flags: Flags = .{},
-memory: Memory,
-
-pub fn new(memory: Memory) Self {
-    return .{
-        .memory = memory,
-    };
-}
+memory: Memory = [_]u8{0} ** 0x10000,
 
 pub fn reset(self: *Self) void {
     self.registers.program_counter = self.fetch_u16(POWER_ON_RESET_ADDRESS);
