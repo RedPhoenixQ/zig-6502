@@ -66,8 +66,8 @@ const Addresses = struct {
 /// Return an starting address if the hexfile includes it
 pub fn read(input: anytype, output: []u8) !Addresses {
     var addresses: Addresses = .{};
-    var base: u32 = 0;
-    var upper_base: u32 = 0;
+    var segment_address_offset: u32 = 0;
+    var linear_address_offset: u32 = 0;
     while (true) {
         const first_byte = while (true) {
             const byte = try input.readByte();
@@ -76,16 +76,18 @@ pub fn read(input: anytype, output: []u8) !Addresses {
         };
         // : is the colon that starts every Intel HEX record.
         if (first_byte != ':') {
-            Log.err("Line did not start with ':', got '{any}'(0x{0x:0>2})", .{first_byte});
+            Log.err("Line did not start with ':', got '{any}'(0x{0X:0>2})", .{first_byte});
             return error.InvalidLineStart;
         }
         // ll is the record-length field that represents the number of data bytes (dd) in the record.
         const record_length = try std.fmt.parseInt(u8, &try input.readBytesNoEof(2), 16);
-        Log.debug("Record Length: {x:0>2}({0any})", .{record_length});
+        Log.debug("Record Length: 0x{X:0>2}({0any})", .{record_length});
 
         // aaaa is the address field that represents the starting address for subsequent data in the record.
         const address = try std.fmt.parseInt(u16, &try input.readBytesNoEof(4), 16);
-        Log.debug("Address: {x:0>4}", .{address});
+        Log.debug("Address: {X:0>4}", .{address});
+        const effective_address: u32 = segment_address_offset + linear_address_offset + address;
+        Log.debug("Effective address: {X:0>8}", .{effective_address});
 
         // tt is the field that represents the HEX record type
         if (try input.readByte() != '0') {
@@ -105,12 +107,12 @@ pub fn read(input: anytype, output: []u8) !Addresses {
         if (record_length > 0) {
             switch (record_type) {
                 .Data => {
-                    if (address + record_length > output.len) {
-                        Log.err("Output slice is not big enough to contain the HEX data. Tried to write 0x{X} bytes at 0x{X}", .{ record_length, address });
+                    if (effective_address + record_length > output.len) {
+                        Log.err("Output slice is not big enough to contain the HEX data. Tried to write 0x{X} bytes at 0x{X}", .{ record_length, effective_address });
                         return error.OutputTooSmall;
                     }
 
-                    const data = output[base + upper_base + address .. base + upper_base + address + record_length];
+                    const data = output[effective_address .. effective_address + record_length];
                     for (data) |*d| {
                         d.* = try std.fmt.parseInt(u8, &try input.readBytesNoEof(2), 16);
                         checksum +%= d.*;
@@ -125,8 +127,8 @@ pub fn read(input: anytype, output: []u8) !Addresses {
                         d.* = try std.fmt.parseInt(u8, &try input.readBytesNoEof(2), 16);
                         checksum +%= d.*;
                     }
-                    Log.debug("New base address: {X:0>4}", .{data});
-                    base = @as(u32, @intCast(std.mem.readInt(u16, &data, .big))) * 16;
+                    segment_address_offset = @as(u32, @intCast(std.mem.readInt(u16, &data, .big))) * 16;
+                    Log.debug("Extended Segment Address: {X:0>4}", .{segment_address_offset});
                 },
                 .StartSegmentAddress => {
                     if (record_length != 0x04) {
@@ -150,14 +152,16 @@ pub fn read(input: anytype, output: []u8) !Addresses {
                 .ExtendedLineraAddress => {
                     if (record_length != 0x02) {
                         return error.InvalidExtendedLineraAddress;
+                    } else if (address != 0x0000) {
+                        return error.InvalidExtendedLineraAddress;
                     }
                     var data: [2]u8 = undefined;
                     for (&data) |*d| {
                         d.* = try std.fmt.parseInt(u8, &try input.readBytesNoEof(2), 16);
                         checksum +%= d.*;
                     }
-                    Log.debug("New base address: {X:0>4}\n", .{data});
-                    upper_base = @as(u32, @intCast(std.mem.readInt(u16, &data, .big))) << 16;
+                    linear_address_offset = @as(u32, @intCast(std.mem.readInt(u16, &data, .big))) << 16;
+                    Log.debug("Extended Linera Address: {X:0>4}\n", .{linear_address_offset});
                 },
                 .StartLinearAddress => {
                     if (record_length != 0x04) {
@@ -171,7 +175,7 @@ pub fn read(input: anytype, output: []u8) !Addresses {
                         checksum +%= d.*;
                     }
                     addresses.linear = std.mem.readInt(u32, &data, .big);
-                    Log.debug("Linear start address: {?X:0>8}\n", .{addresses.linear});
+                    Log.debug("Start Linear Address: {?X:0>8}\n", .{addresses.linear});
                 },
                 .EOF => addresses.eof = address,
             }
@@ -319,13 +323,15 @@ test "data record one" {
     try std.testing.expectEqualSlices(u8, &DATA, &output);
 }
 
-test "data record two" {
+test "ExtendedSegmentAddress" {
+    std.testing.log_level = .debug;
     const HEX =
+        \\:020000021200EA
         \\:100130003F0156702B5E712B722B732146013421C7
         \\:00000001FF
     ;
-    var DATA = [_]u8{0} ** (0x0130 + 0x10);
-    @memcpy(DATA[0x0130 .. 0x0130 + 0x10], &[0x10]u8{
+    var DATA = [_]u8{0} ** ((0x1200 * 16) + 0x0130 + 0x10);
+    @memcpy(DATA[(0x1200 * 16) + 0x0130 .. (0x1200 * 16) + 0x0130 + 0x10], &[0x10]u8{
         0x3F,
         0x01,
         0x56,
