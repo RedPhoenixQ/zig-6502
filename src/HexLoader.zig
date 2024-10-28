@@ -39,12 +39,19 @@ const RecordType = enum(u8) {
 /// https://developer.arm.com/documentation/ka003292/latest/
 ///
 /// Hex file must end with an EOF record ":00000001FF"
-pub fn read(input: anytype, output: []u8) !void {
+///
+/// Return an starting address if the hexfile includes it
+pub fn read(input: anytype, output: []u8) !?u32 {
+    var start_address: ?u32 = null;
     while (true) {
+        const first_byte = while (true) {
+            const byte = try input.readByte();
+            // Consume whitespace
+            if (!std.ascii.isWhitespace(byte)) break byte;
+        };
         // : is the colon that starts every Intel HEX record.
-        const colon = try input.readByte();
-        if (colon != ':') {
-            Log.err("Line did not start with ':'", .{});
+        if (first_byte != ':') {
+            Log.err("Line did not start with ':', got '{any}'(0x{0x:0>2})", .{first_byte});
             return error.InvalidLineStart;
         }
         // ll is the record-length field that represents the number of data bytes (dd) in the record.
@@ -63,59 +70,61 @@ pub fn read(input: anytype, output: []u8) !void {
         const record_type = try input.readEnum(RecordType, .big);
         Log.debug("Record Type: {s}", .{@tagName(record_type)});
 
+        var checksum: u8 = @intCast((record_length + address +
+            // Convert from ASCII digit to number
+            (@intFromEnum(record_type) - 0x30)) % 255);
+
         // dd is a data field that represents one byte of data. A record may have
         // multiple data bytes. The number of data bytes in the record must match the
         // number specified by the ll field.
-        const data = output[address .. address + record_length];
-
         if (record_length > 0) {
-            if (address + record_length > output.len) {
-                Log.err("Output slice is not big enough to contain the HEX data. Tried to write 0x{x} bytes at 0x{x}", .{ record_length, address });
-                return error.OutputTooSmall;
-            }
+            switch (record_type) {
+                .Data => {
+                    if (address + record_length > output.len) {
+                        Log.err("Output slice is not big enough to contain the HEX data. Tried to write 0x{x} bytes at 0x{x}", .{ record_length, address });
+                        return error.OutputTooSmall;
+                    }
 
-            for (data) |*d| {
-                d.* = try std.fmt.parseInt(u8, &try input.readBytesNoEof(2), 16);
-            }
-            Log.debug("Data: {X:0>2}\n", .{data});
-        }
-
-        const checksum_or_end_of_line = input.readBytesNoEof(2) catch |err| switch (err) {
-            @TypeOf(input).NoEofError.EndOfStream => .{ '\r', '\n' },
-            else => return err,
-        };
-        // Checksum is optional
-        if (!std.mem.eql(u8, &checksum_or_end_of_line, "\r\n")) {
-            const line_end = input.readBytesNoEof(2) catch |err| switch (err) {
-                @TypeOf(input).NoEofError.EndOfStream => .{ '\r', '\n' },
-                else => return err,
-            };
-            if (!std.mem.eql(u8, &line_end, "\r\n")) {
-                Log.err("Did not find return and newline after checksum", .{});
-                return error.MissingEndOfLine;
-            }
-
-            // cc is the checksum field that represents the checksum of the record. The
-            // checksum is calculated by summing the values of all hexadecimal digit pairs in
-            // the record modulo 256 and taking the two's complement.
-            const expected_checksum = try std.fmt.parseInt(u8, &checksum_or_end_of_line, 16);
-            Log.debug("Checksum: {}", .{expected_checksum});
-
-            var checksum: u8 = @intCast((record_length + address +
-                // Convert from ASCII digit to number
-                (@intFromEnum(record_type) - 0x30)) % 255);
-            for (data) |byte| {
-                checksum +%= byte;
-            }
-            checksum = @addWithOverflow(~checksum, 1)[0];
-
-            if (checksum != expected_checksum) {
-                Log.err("Checksum failed: expected {x:0>2}, got {x:0>2}", .{ expected_checksum, checksum });
-                return error.InvalidChecksum;
+                    const data = output[address .. address + record_length];
+                    for (data) |*d| {
+                        d.* = try std.fmt.parseInt(u8, &try input.readBytesNoEof(2), 16);
+                        checksum +%= d.*;
+                    }
+                    Log.debug("Data: {X:0>2}\n", .{data});
+                },
+                .StartLinearAddress => {
+                    if (record_length != 0x04) {
+                        return error.InvalidStartLinearAddressRecord;
+                    } else if (address != 0x0000) {
+                        return error.InvalidStartLinearAddressRecord;
+                    }
+                    var data: [4]u8 = undefined;
+                    for (&data) |*d| {
+                        d.* = try std.fmt.parseInt(u8, &try input.readBytesNoEof(2), 16);
+                        checksum +%= d.*;
+                    }
+                    start_address = std.mem.readInt(u32, &data, .big);
+                    Log.debug("Start address: {X:0>8}\n", .{start_address.?});
+                },
+                else => {},
             }
         }
+
+        // cc is the checksum field that represents the checksum of the record. The
+        // checksum is calculated by summing the values of all hexadecimal digit pairs in
+        // the record modulo 256 and taking the two's complement.
+        const expected_checksum = try std.fmt.parseInt(u8, &try input.readBytesNoEof(2), 16);
+        Log.debug("Checksum: {}", .{expected_checksum});
+
+        // Take the Two's Complement
+        checksum = @addWithOverflow(~checksum, 1)[0];
+        if (checksum != expected_checksum) {
+            Log.err("Checksum failed: expected {x:0>2}, got {x:0>2}", .{ expected_checksum, checksum });
+            return error.InvalidChecksum;
+        }
+
         if (record_type == .EOF) {
-            return;
+            return start_address;
         }
     }
 }
@@ -208,7 +217,7 @@ test read {
     var stream = std.io.fixedBufferStream(HEX);
     const reader = stream.reader();
 
-    try read(reader, output[0..]);
+    _ = try read(reader, output[0..]);
     try std.testing.expectEqualSlices(u8, &DATA, &output);
 }
 
@@ -238,7 +247,7 @@ test "data record one" {
     var stream = std.io.fixedBufferStream(HEX);
     const reader = stream.reader();
 
-    try read(reader, output[0..]);
+    _ = try read(reader, output[0..]);
     try std.testing.expectEqualSlices(u8, &DATA, &output);
 }
 
@@ -268,6 +277,17 @@ test "data record two" {
     var stream = std.io.fixedBufferStream(HEX);
     const reader = stream.reader();
 
-    try read(reader, output[0..]);
+    _ = try read(reader, output[0..]);
     try std.testing.expectEqualSlices(u8, &DATA, &output);
+}
+
+test "start address" {
+    const HEX = ":04000005000000CD2A\r\n" ++
+        ":00000001FF";
+    var stream = std.io.fixedBufferStream(HEX);
+    const reader = stream.reader();
+
+    const start_address = try read(reader, &[_]u8{});
+    try std.testing.expect(start_address != null);
+    try std.testing.expectEqual(0x000000CD, start_address.?);
 }
