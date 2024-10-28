@@ -13,12 +13,26 @@ const DATA_OFFSET = 6 * 2;
 const CHECKSUM_LENGTH = 2 * 2;
 const RECORD_FIELD_LENGTH = TYPE_OFFSET + CHECKSUM_LENGTH;
 
+/// https://en.wikipedia.org/wiki/Intel_HEX#Record_Types
 const RecordType = enum(u8) {
+    /// The byte count specifies number of data bytes in the record. The example has 0B (eleven) data
+    /// bytes. The 16-bit starting address for the data (in the example at addresses beginning at 0010)
+    /// and the data (61, 64, 64, 72, 65, 73, 73, 20, 67, 61, 70).
     Data = '0',
+    /// Must occur exactly once per file in the last record of the file. The byte count is 00,
+    /// the address field is typically 0000 and the data field is omitted.
     EOF = '1',
+    /// the data field contains a 16-bit segment base address. This is multiplied by 16 and
+    /// added to each subsequent data record address to form the starting address for the data.
     ExtendedSegmentAddress = '2',
+    /// The byte count is always 04, the address field is 0000.
+    ///
+    /// The four data bytes represent a 32-bit address value (big endian). In the case of CPUs
+    /// that support it, this 32-bit address is the address at which execution should start.
     ExtendedLineraAddress = '4',
-    /// (MDK-ARM only)
+    /// The byte count is always 04, the address field is 0000. The four data bytes represent a 32-bit
+    /// address value (big endian). In the case of CPUs that support it, this 32-bit address is the
+    /// address at which execution should start.
     StartLinearAddress = '5',
 };
 
