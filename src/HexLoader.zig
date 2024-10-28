@@ -84,20 +84,20 @@ pub fn read(input: anytype, output: []u8) !void {
             // cc is the checksum field that represents the checksum of the record. The
             // checksum is calculated by summing the values of all hexadecimal digit pairs in
             // the record modulo 256 and taking the two's complement.
-            const checksum = try std.fmt.parseInt(u8, &checksum_or_end_of_line, 16);
-            Log.debug("Checksum: {}", .{checksum});
+            const expected_checksum = try std.fmt.parseInt(u8, &checksum_or_end_of_line, 16);
+            Log.debug("Checksum: {}", .{expected_checksum});
 
-            var sum: u8 = @intCast((record_length + address +
+            var checksum: u8 = @intCast((record_length + address +
                 // Convert from ASCII digit to number
                 (@intFromEnum(record_type) - 0x30)) % 255);
             for (data) |byte| {
-                sum +%= byte;
+                checksum +%= byte;
             }
-            sum = @addWithOverflow(~sum, 1)[0];
+            checksum = @addWithOverflow(~checksum, 1)[0];
 
-            if (sum != checksum) {
-                Log.err("Checksum failed: expected {x:0>2}, got {x:0>2}", .{ checksum, sum });
-                // return error.InvalidChecksum;
+            if (checksum != expected_checksum) {
+                Log.err("Checksum failed: expected {x:0>2}, got {x:0>2}", .{ expected_checksum, checksum });
+                return error.InvalidChecksum;
             }
         }
         if (record_type == .EOF) {
