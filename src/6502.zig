@@ -810,13 +810,34 @@ pub fn step(self: *Self) Op {
             }
         },
 
-        .CLC => self.flags.carry = false,
-        .CLD => self.flags.decimal_mode = false,
-        .CLI => self.flags.interupt_disabled = false,
-        .CLV => self.flags.overflow = false,
-        .SEC => self.flags.carry = true,
-        .SED => self.flags.decimal_mode = true,
-        .SEI => self.flags.interupt_disabled = true,
+        .CLC => {
+            self.cycles +%= 1;
+            self.flags.carry = false;
+        },
+        .CLD => {
+            self.cycles +%= 1;
+            self.flags.decimal_mode = false;
+        },
+        .CLI => {
+            self.cycles +%= 1;
+            self.flags.interupt_disabled = false;
+        },
+        .CLV => {
+            self.cycles +%= 1;
+            self.flags.overflow = false;
+        },
+        .SEC => {
+            self.cycles +%= 1;
+            self.flags.carry = true;
+        },
+        .SED => {
+            self.cycles +%= 1;
+            self.flags.decimal_mode = true;
+        },
+        .SEI => {
+            self.cycles +%= 1;
+            self.flags.interupt_disabled = true;
+        },
 
         .BRK => {
             // Add two to get the correct offset of the return address on the stack

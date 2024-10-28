@@ -656,3 +656,32 @@ test "BVS" {
     t.set_op_param(0x69);
     try t.test_op(.BVS_REL);
 }
+
+test "CLC" {
+    var t: TestCPU = .{};
+    try t.test_op(.CLC);
+}
+test "CLD" {
+    var t: TestCPU = .{};
+    try t.test_op(.CLD);
+}
+test "CLI" {
+    var t: TestCPU = .{};
+    try t.test_op(.CLI);
+}
+test "CLV" {
+    var t: TestCPU = .{};
+    try t.test_op(.CLV);
+}
+test "SEC" {
+    var t: TestCPU = .{};
+    try t.test_op(.SEC);
+}
+test "SED" {
+    var t: TestCPU = .{};
+    try t.test_op(.SED);
+}
+test "SEI" {
+    var t: TestCPU = .{};
+    try t.test_op(.SEI);
+}
