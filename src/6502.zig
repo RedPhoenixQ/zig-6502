@@ -788,7 +788,12 @@ pub fn step(self: *Self) Op {
             self.push_program_counter();
             self.registers.program_counter = subroutine_address;
         },
-        .RTS => self.pop_program_counter(),
+        .RTS => {
+            // Does extra reads in the real ship and takes 2 extra cycles
+            // http://forum.6502.org/viewtopic.php?f=2&t=5146
+            self.cycles +%= 2;
+            self.pop_program_counter();
+        },
 
         .BCC_REL, .BCS_REL, .BEQ_REL, .BMI_REL, .BNE_REL, .BPL_REL, .BVC_REL, .BVS_REL => {
             const should_branch = switch (op) {
@@ -844,11 +849,13 @@ pub fn step(self: *Self) Op {
             self.registers.program_counter +%= 2;
             self.push_program_counter();
             self.push_flags();
+            // Only pay for one stack pointer increment
+            self.cycles -%= 1;
             self.flags.break_command = true;
             self.flags.interupt_disabled = true;
             self.registers.program_counter = self.fetch_u16(BRK_INTERUPT_HANDLER_ADDRESS) -% 1;
         },
-        .NOP => {},
+        .NOP => self.cycles +%= 1,
         .RTI => {
             self.pop_flags();
             self.pop_program_counter();

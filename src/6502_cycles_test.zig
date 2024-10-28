@@ -687,3 +687,18 @@ test "SEI" {
     var t: TestCPU = .{};
     try t.test_op(.SEI);
 }
+
+test "BRK" {
+    var t: TestCPU = .{};
+    try t.test_op(.BRK);
+}
+test "NOP" {
+    var t: TestCPU = .{};
+    try t.test_op(.NOP);
+}
+test "RTI" {
+    var t: TestCPU = .{};
+    // Make "space" on the stack to return (PC and Flags)
+    t.cpu.registers.stack_pointer -= 3;
+    try t.test_op(.RTI);
+}
