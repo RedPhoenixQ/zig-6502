@@ -22,13 +22,21 @@ const RecordType = enum(u8) {
     /// Must occur exactly once per file in the last record of the file. The byte count is 00,
     /// the address field is typically 0000 and the data field is omitted.
     EOF = '1',
-    /// the data field contains a 16-bit segment base address. This is multiplied by 16 and
-    /// added to each subsequent data record address to form the starting address for the data.
+    /// The byte count is always 02, the address field (typically 0000) is ignored and the data field
+    /// contains a 16-bit segment base address. This is multiplied by 16 and added to each subsequent
+    /// data record address to form the starting address for the data. This allows addressing up to
+    /// one mebibyte (1048576 bytes) of address space.
     ExtendedSegmentAddress = '2',
-    /// The byte count is always 04, the address field is 0000.
-    ///
-    /// The four data bytes represent a 32-bit address value (big endian). In the case of CPUs
-    /// that support it, this 32-bit address is the address at which execution should start.
+    /// For 80x86 processors, specifies the starting execution address. The byte count is always 04,
+    /// the address field is 0000 and the first two data bytes are the CS value, the latter two are
+    /// the IP value. The execution should start at this address.
+    StartSegmentAddress = '3',
+    /// Allows for 32 bit addressing (up to 4 GiB). The byte count is always 02 and the address field
+    /// is ignored (typically 0000). The two data bytes (big endian) specify the upper 16 bits of the
+    /// 32 bit absolute address for all subsequent type 00 records; these upper address bits apply until
+    /// the next 04 record. The absolute address for a type 00 record is formed by combining the upper
+    /// 16 address bits of the most recent 04 record with the low 16 address bits of the 00 record. If a
+    /// type 00 record is not preceded by any type 04 records then its upper 16 address bits default to 0000.
     ExtendedLineraAddress = '4',
     /// The byte count is always 04, the address field is 0000. The four data bytes represent a 32-bit
     /// address value (big endian). In the case of CPUs that support it, this 32-bit address is the
