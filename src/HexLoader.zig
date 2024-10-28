@@ -357,6 +357,41 @@ test "ExtendedSegmentAddress" {
     try std.testing.expectEqualSlices(u8, &DATA, &output);
 }
 
+test "ExtendedLineraAddress" {
+    std.testing.log_level = .debug;
+    const HEX =
+        \\:020000040001F9
+        \\:100130003F0156702B5E712B722B732146013421C7
+        \\:00000001FF
+    ;
+    // Uses ~65KiB of memory
+    var DATA = [_]u8{0} ** ((0x0001 << 16) + 0x0130 + 0x10);
+    @memcpy(DATA[(0x0001 << 16) + 0x0130 .. (0x0001 << 16) + 0x0130 + 0x10], &[0x10]u8{
+        0x3F,
+        0x01,
+        0x56,
+        0x70,
+        0x2B,
+        0x5E,
+        0x71,
+        0x2B,
+        0x72,
+        0x2B,
+        0x73,
+        0x21,
+        0x46,
+        0x01,
+        0x34,
+        0x21,
+    });
+    var output = [_]u8{0} ** DATA.len;
+    var stream = std.io.fixedBufferStream(HEX);
+    const reader = stream.reader();
+
+    _ = try read(reader, output[0..]);
+    try std.testing.expectEqualSlices(u8, &DATA, &output);
+}
+
 test "start address linear" {
     const HEX =
         \\:04000005000000CD2A
