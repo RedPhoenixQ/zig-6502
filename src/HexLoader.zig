@@ -418,3 +418,18 @@ test "StartLinearAddress" {
     try std.testing.expect(addresses.linear != null);
     try std.testing.expectEqual(0x000000CD, addresses.linear.?);
 }
+
+test "functional test" {
+    const HEX = @embedFile("./tests/6502_functional_test.hex");
+    // Binary file starts at 0x000A
+    const BIN = @embedFile("./tests/6502_functional_test.bin");
+    // Binary file is filled with 0xFF for untouched bytes
+    var output = [_]u8{0xFF} ** 0x10000;
+    var stream = std.io.fixedBufferStream(HEX);
+    const reader = stream.reader();
+
+    const addresses = try read(reader, output[0..]);
+
+    try std.testing.expectEqualSlices(u8, BIN, output[0x000A..]);
+    try std.testing.expectEqual(0x0400, addresses.eof);
+}
