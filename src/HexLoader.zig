@@ -25,7 +25,7 @@ const RecordType = enum(u8) {
 /// https://developer.arm.com/documentation/ka003292/latest/
 ///
 /// Hex file must end with an EOF record ":00000001FF"
-pub fn from_hex(input: anytype, output: []u8) !void {
+pub fn read(input: anytype, output: []u8) !void {
     var buf: [128]u8 = undefined;
 
     while (true) {
@@ -118,7 +118,7 @@ pub fn from_hex(input: anytype, output: []u8) !void {
     }
 }
 
-test from_hex {
+test read {
     const HEX =
         ":10001300AC12AD13AE10AF1112002F8E0E8F0F2244\r\n" ++
         ":10000300E50B250DF509E50A350CF5081200132259\r\n" ++
@@ -206,7 +206,7 @@ test from_hex {
     var stream = std.io.fixedBufferStream(HEX);
     const reader = stream.reader();
 
-    try from_hex(reader, output[0..]);
+    try read(reader, output[0..]);
     try std.testing.expectEqualSlices(u8, &DATA, &output);
 }
 
@@ -236,7 +236,7 @@ test "data record one" {
     var stream = std.io.fixedBufferStream(HEX);
     const reader = stream.reader();
 
-    try from_hex(reader, output[0..]);
+    try read(reader, output[0..]);
     try std.testing.expectEqualSlices(u8, &DATA, &output);
 }
 
@@ -266,6 +266,6 @@ test "data record two" {
     var stream = std.io.fixedBufferStream(HEX);
     const reader = stream.reader();
 
-    try from_hex(reader, output[0..]);
+    try read(reader, output[0..]);
     try std.testing.expectEqualSlices(u8, &DATA, &output);
 }
