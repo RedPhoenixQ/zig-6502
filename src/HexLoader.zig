@@ -291,7 +291,7 @@ test read {
     try std.testing.expectEqualSlices(u8, &DATA, &output);
 }
 
-test "data record one" {
+test "Data" {
     const HEX =
         \\:10246200464C5549442050524F46494C4500464C33
         \\:00000001FF
@@ -357,6 +357,20 @@ test "ExtendedSegmentAddress" {
     try std.testing.expectEqualSlices(u8, &DATA, &output);
 }
 
+test "StartSegmentAddress" {
+    const HEX =
+        \\:0400000300003800C1
+        \\:00000001FF
+    ;
+    var stream = std.io.fixedBufferStream(HEX);
+    const reader = stream.reader();
+
+    const addresses = try read(reader, &[_]u8{});
+    try std.testing.expect(addresses.segment != null);
+    try std.testing.expectEqual(0x0000, addresses.segment.?.code_segment);
+    try std.testing.expectEqual(0x3800, addresses.segment.?.instruction_pointer);
+}
+
 test "ExtendedLineraAddress" {
     std.testing.log_level = .debug;
     const HEX =
@@ -392,7 +406,7 @@ test "ExtendedLineraAddress" {
     try std.testing.expectEqualSlices(u8, &DATA, &output);
 }
 
-test "start address linear" {
+test "StartLinearAddress" {
     const HEX =
         \\:04000005000000CD2A
         \\:00000001FF
@@ -403,18 +417,4 @@ test "start address linear" {
     const addresses = try read(reader, &[_]u8{});
     try std.testing.expect(addresses.linear != null);
     try std.testing.expectEqual(0x000000CD, addresses.linear.?);
-}
-
-test "start address segment" {
-    const HEX =
-        \\:0400000300003800C1
-        \\:00000001FF
-    ;
-    var stream = std.io.fixedBufferStream(HEX);
-    const reader = stream.reader();
-
-    const addresses = try read(reader, &[_]u8{});
-    try std.testing.expect(addresses.segment != null);
-    try std.testing.expectEqual(0x0000, addresses.segment.?.code_segment);
-    try std.testing.expectEqual(0x3800, addresses.segment.?.instruction_pointer);
 }
