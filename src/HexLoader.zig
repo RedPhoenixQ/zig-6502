@@ -23,12 +23,14 @@ const RecordType = enum(u8) {
 };
 
 /// https://developer.arm.com/documentation/ka003292/latest/
-pub fn from_hex(input: anytype, output: anytype) !void {
+///
+/// Hex file must end with an EOF record ":00000001FF"
+pub fn from_hex(input: anytype, output: []u8) !void {
     var buf: [128]u8 = undefined;
 
     while (true) {
         // : is the colon that starts every Intel HEX record.
-        const colon = input.readByte() catch |err| if (err == error.EndOfStream) break else return err;
+        const colon = try input.readByte();
         if (colon != ':') {
             Log.err("Line did not start with ':'", .{});
             return error.InvalidLineStart;
@@ -52,20 +54,29 @@ pub fn from_hex(input: anytype, output: anytype) !void {
         // dd is a data field that represents one byte of data. A record may have
         // multiple data bytes. The number of data bytes in the record must match the
         // number specified by the ll field.
-        const data_read = try input.readAtLeast(buf[0 .. record_length * 2], record_length * 2 - 1);
-        if (data_read == record_length * 2 - 1) {
-            Log.err("Length did not match the amount of bytes read", .{});
-            return error.InvalidLineLength;
-        }
-        const data_hex = buf[0..data_read];
-        Log.debug("Data hex: {s}", .{data_hex});
-
         const data = buf[0..record_length];
-        for (data, 0..data.len) |*d, i| {
-            d.* = try std.fmt.parseInt(u8, data_hex[i * 2 .. i * 2 + 2], 16);
+
+        if (record_length > 0) {
+            if (address + record_length > output.len) {
+                Log.err("Output slice is not big enough to contain the HEX data. Tried to write 0x{x} bytes at 0x{x}", .{ record_length, address });
+                return error.OutputTooSmall;
+            }
+
+            const data_read = try input.readAtLeast(buf[0 .. record_length * 2], record_length * 2 - 1);
+            if (data_read == record_length * 2 - 1) {
+                Log.err("Length did not match the amount of bytes read", .{});
+                return error.InvalidLineLength;
+            }
+            const data_hex = buf[0..data_read];
+            Log.debug("Data hex: {s}", .{data_hex});
+
+            for (data, 0..data.len) |*d, i| {
+                d.* = try std.fmt.parseInt(u8, data_hex[i * 2 .. i * 2 + 2], 16);
+            }
+            Log.debug("Data: {X:0>2}\n", .{data});
+
+            @memcpy(output[address .. address + record_length], data);
         }
-        Log.debug("Data: {any}\n", .{data});
-        try output.writeAll(data);
 
         const checksum_or_end_of_line = input.readBytesNoEof(2) catch |err| switch (err) {
             @TypeOf(input).NoEofError.EndOfStream => .{ '\r', '\n' },
@@ -101,31 +112,160 @@ pub fn from_hex(input: anytype, output: anytype) !void {
                 // return error.InvalidChecksum;
             }
         }
+        if (record_type == .EOF) {
+            return;
+        }
     }
 }
 
 test from_hex {
-    const HEX = ":10246200464C5549442050524F46494C4500464C33";
-    const DATA = [_]u8{ 70, 76, 85, 73, 68, 32, 80, 82, 79, 70, 73, 76, 69, 0, 70, 76 };
-    var output: [DATA.len]u8 = undefined;
-    var out_stream = std.io.fixedBufferStream(&output);
-    const writer = out_stream.writer();
+    const HEX =
+        ":10001300AC12AD13AE10AF1112002F8E0E8F0F2244\r\n" ++
+        ":10000300E50B250DF509E50A350CF5081200132259\r\n" ++
+        ":03000000020023D8\r\n" ++
+        ":0C002300787FE4F6D8FD7581130200031D\r\n" ++
+        ":10002F00EFF88DF0A4FFEDC5F0CEA42EFEEC88F016\r\n" ++
+        ":04003F00A42EFE22CB\r\n" ++
+        ":00000001FF";
+    var DATA = [_]u8{0} ** 0xFF;
+    @memcpy(DATA[0x0013 .. 0x0013 + 0x10], &[0x10]u8{
+        0xAC,
+        0x12,
+        0xAD,
+        0x13,
+        0xAE,
+        0x10,
+        0xAF,
+        0x11,
+        0x12,
+        0x00,
+        0x2F,
+        0x8E,
+        0x0E,
+        0x8F,
+        0x0F,
+        0x22,
+    });
+    @memcpy(DATA[0x0003 .. 0x0003 + 0x10], &[0x10]u8{
+        0xE5,
+        0x0B,
+        0x25,
+        0x0D,
+        0xF5,
+        0x09,
+        0xE5,
+        0x0A,
+        0x35,
+        0x0C,
+        0xF5,
+        0x08,
+        0x12,
+        0x00,
+        0x13,
+        0x22,
+    });
+    @memcpy(DATA[0x0000 .. 0x0000 + 0x03], &[0x03]u8{
+        0x02, 0x00, 0x23,
+    });
+    @memcpy(DATA[0x0023 .. 0x0023 + 0x0C], &[0x0C]u8{
+        0x78,
+        0x7F,
+        0xE4,
+        0xF6,
+        0xD8,
+        0xFD,
+        0x75,
+        0x81,
+        0x13,
+        0x02,
+        0x00,
+        0x03,
+    });
+    @memcpy(DATA[0x002F .. 0x002F + 0x10], &[0x10]u8{
+        0xEF,
+        0xF8,
+        0x8D,
+        0xF0,
+        0xA4,
+        0xFF,
+        0xED,
+        0xC5,
+        0xF0,
+        0xCE,
+        0xA4,
+        0x2E,
+        0xFE,
+        0xEC,
+        0x88,
+        0xF0,
+    });
+    @memcpy(DATA[0x003F .. 0x003F + 0x04], &[0x04]u8{
+        0xA4, 0x2E, 0xFE, 0x22,
+    });
+    var output = [_]u8{0} ** DATA.len;
     var stream = std.io.fixedBufferStream(HEX);
     const reader = stream.reader();
 
-    try from_hex(reader, writer);
+    try from_hex(reader, output[0..]);
     try std.testing.expectEqualSlices(u8, &DATA, &output);
 }
 
-test "hex with checksum" {
-    const HEX = ":100130003F0156702B5E712B722B732146013421C7";
-    const DATA = [_]u8{ 63, 1, 86, 112, 43, 94, 113, 43, 114, 43, 115, 33, 70, 1, 52, 33 };
-    var output: [DATA.len]u8 = undefined;
-    var out_stream = std.io.fixedBufferStream(&output);
-    const writer = out_stream.writer();
+test "data record one" {
+    const HEX = ":10246200464C5549442050524F46494C4500464C33\r\n" ++
+        ":00000001FF";
+    var DATA = [_]u8{0} ** (0x2462 + 0x10);
+    @memcpy(DATA[0x2462 .. 0x2462 + 0x10], &[0x10]u8{
+        0x46,
+        0x4C,
+        0x55,
+        0x49,
+        0x44,
+        0x20,
+        0x50,
+        0x52,
+        0x4F,
+        0x46,
+        0x49,
+        0x4C,
+        0x45,
+        0x00,
+        0x46,
+        0x4C,
+    });
+    var output = [_]u8{0} ** DATA.len;
     var stream = std.io.fixedBufferStream(HEX);
     const reader = stream.reader();
 
-    try from_hex(reader, writer);
+    try from_hex(reader, output[0..]);
+    try std.testing.expectEqualSlices(u8, &DATA, &output);
+}
+
+test "data record two" {
+    const HEX = ":100130003F0156702B5E712B722B732146013421C7\r\n" ++
+        ":00000001FF";
+    var DATA = [_]u8{0} ** (0x0130 + 0x10);
+    @memcpy(DATA[0x0130 .. 0x0130 + 0x10], &[0x10]u8{
+        0x3F,
+        0x01,
+        0x56,
+        0x70,
+        0x2B,
+        0x5E,
+        0x71,
+        0x2B,
+        0x72,
+        0x2B,
+        0x73,
+        0x21,
+        0x46,
+        0x01,
+        0x34,
+        0x21,
+    });
+    var output = [_]u8{0} ** DATA.len;
+    var stream = std.io.fixedBufferStream(HEX);
+    const reader = stream.reader();
+
+    try from_hex(reader, output[0..]);
     try std.testing.expectEqualSlices(u8, &DATA, &output);
 }
