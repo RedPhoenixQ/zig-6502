@@ -131,13 +131,14 @@ pub fn read(input: anytype, output: []u8) !?u32 {
 
 test read {
     const HEX =
-        ":10001300AC12AD13AE10AF1112002F8E0E8F0F2244\r\n" ++
-        ":10000300E50B250DF509E50A350CF5081200132259\r\n" ++
-        ":03000000020023D8\r\n" ++
-        ":0C002300787FE4F6D8FD7581130200031D\r\n" ++
-        ":10002F00EFF88DF0A4FFEDC5F0CEA42EFEEC88F016\r\n" ++
-        ":04003F00A42EFE22CB\r\n" ++
-        ":00000001FF";
+        \\:10001300AC12AD13AE10AF1112002F8E0E8F0F2244
+        \\:10000300E50B250DF509E50A350CF5081200132259
+        \\:03000000020023D8
+        \\:0C002300787FE4F6D8FD7581130200031D
+        \\:10002F00EFF88DF0A4FFEDC5F0CEA42EFEEC88F016
+        \\:04003F00A42EFE22CB
+        \\:00000001FF
+    ;
     var DATA = [_]u8{0} ** 0xFF;
     @memcpy(DATA[0x0013 .. 0x0013 + 0x10], &[0x10]u8{
         0xAC,
@@ -222,8 +223,10 @@ test read {
 }
 
 test "data record one" {
-    const HEX = ":10246200464C5549442050524F46494C4500464C33\r\n" ++
-        ":00000001FF";
+    const HEX =
+        \\:10246200464C5549442050524F46494C4500464C33
+        \\:00000001FF
+    ;
     var DATA = [_]u8{0} ** (0x2462 + 0x10);
     @memcpy(DATA[0x2462 .. 0x2462 + 0x10], &[0x10]u8{
         0x46,
@@ -252,8 +255,10 @@ test "data record one" {
 }
 
 test "data record two" {
-    const HEX = ":100130003F0156702B5E712B722B732146013421C7\r\n" ++
-        ":00000001FF";
+    const HEX =
+        \\:100130003F0156702B5E712B722B732146013421C7
+        \\:00000001FF
+    ;
     var DATA = [_]u8{0} ** (0x0130 + 0x10);
     @memcpy(DATA[0x0130 .. 0x0130 + 0x10], &[0x10]u8{
         0x3F,
@@ -282,8 +287,10 @@ test "data record two" {
 }
 
 test "start address" {
-    const HEX = ":04000005000000CD2A\r\n" ++
-        ":00000001FF";
+    const HEX =
+        \\:04000005000000CD2A
+        \\:00000001FF
+    ;
     var stream = std.io.fixedBufferStream(HEX);
     const reader = stream.reader();
 
