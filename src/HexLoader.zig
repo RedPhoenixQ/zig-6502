@@ -44,13 +44,30 @@ const RecordType = enum(u8) {
     StartLinearAddress = '5',
 };
 
+const Addresses = struct {
+    /// Contains the address of the final EOF line of the hex file
+    eof: u16 = 0,
+    segment: ?SegmentAddress = null,
+    /// In the case of CPUs that support it, this 32-bit address is the address at which execution
+    /// should start.
+    linear: ?u32 = null,
+
+    const SegmentAddress = struct {
+        code_segment: u16,
+        /// The execution should start at this address.
+        instruction_pointer: u16,
+    };
+};
+
 /// https://developer.arm.com/documentation/ka003292/latest/
 ///
 /// Hex file must end with an EOF record ":00000001FF"
 ///
 /// Return an starting address if the hexfile includes it
-pub fn read(input: anytype, output: []u8) !?u32 {
-    var start_address: ?u32 = null;
+pub fn read(input: anytype, output: []u8) !Addresses {
+    var addresses: Addresses = .{};
+    var base: u32 = 0;
+    var upper_base: u32 = 0;
     while (true) {
         const first_byte = while (true) {
             const byte = try input.readByte();
@@ -89,16 +106,58 @@ pub fn read(input: anytype, output: []u8) !?u32 {
             switch (record_type) {
                 .Data => {
                     if (address + record_length > output.len) {
-                        Log.err("Output slice is not big enough to contain the HEX data. Tried to write 0x{x} bytes at 0x{x}", .{ record_length, address });
+                        Log.err("Output slice is not big enough to contain the HEX data. Tried to write 0x{X} bytes at 0x{X}", .{ record_length, address });
                         return error.OutputTooSmall;
                     }
 
-                    const data = output[address .. address + record_length];
+                    const data = output[base + upper_base + address .. base + upper_base + address + record_length];
                     for (data) |*d| {
                         d.* = try std.fmt.parseInt(u8, &try input.readBytesNoEof(2), 16);
                         checksum +%= d.*;
                     }
-                    Log.debug("Data: {X:0>2}\n", .{data});
+                },
+                .ExtendedSegmentAddress => {
+                    if (record_length != 0x02) {
+                        return error.InvalidExtendedSegmentAddress;
+                    }
+                    var data: [2]u8 = undefined;
+                    for (&data) |*d| {
+                        d.* = try std.fmt.parseInt(u8, &try input.readBytesNoEof(2), 16);
+                        checksum +%= d.*;
+                    }
+                    Log.debug("New base address: {X:0>4}", .{data});
+                    base = @as(u32, @intCast(std.mem.readInt(u16, &data, .big))) * 16;
+                },
+                .StartSegmentAddress => {
+                    if (record_length != 0x04) {
+                        return error.InvalidStartSegmentAddress;
+                    } else if (address != 0x0000) {
+                        return error.InvalidStartSegmentAddress;
+                    }
+                    var data: [4]u8 = undefined;
+                    for (&data) |*d| {
+                        d.* = try std.fmt.parseInt(u8, &try input.readBytesNoEof(2), 16);
+                        checksum +%= d.*;
+                    }
+                    const segment: Addresses.SegmentAddress = .{
+                        .code_segment = std.mem.readInt(u16, data[0..2], .big),
+                        .instruction_pointer = std.mem.readInt(u16, data[2..], .big),
+                    };
+                    Log.debug("Code segment: {X:0>4}", .{segment.code_segment});
+                    Log.debug("Instruction pointer: {X:0>4}", .{segment.instruction_pointer});
+                    addresses.segment = segment;
+                },
+                .ExtendedLineraAddress => {
+                    if (record_length != 0x02) {
+                        return error.InvalidExtendedLineraAddress;
+                    }
+                    var data: [2]u8 = undefined;
+                    for (&data) |*d| {
+                        d.* = try std.fmt.parseInt(u8, &try input.readBytesNoEof(2), 16);
+                        checksum +%= d.*;
+                    }
+                    Log.debug("New base address: {X:0>4}\n", .{data});
+                    upper_base = @as(u32, @intCast(std.mem.readInt(u16, &data, .big))) << 16;
                 },
                 .StartLinearAddress => {
                     if (record_length != 0x04) {
@@ -111,10 +170,10 @@ pub fn read(input: anytype, output: []u8) !?u32 {
                         d.* = try std.fmt.parseInt(u8, &try input.readBytesNoEof(2), 16);
                         checksum +%= d.*;
                     }
-                    start_address = std.mem.readInt(u32, &data, .big);
-                    Log.debug("Start address: {X:0>8}\n", .{start_address.?});
+                    addresses.linear = std.mem.readInt(u32, &data, .big);
+                    Log.debug("Linear start address: {?X:0>8}\n", .{addresses.linear});
                 },
-                else => {},
+                .EOF => addresses.eof = address,
             }
         }
 
@@ -122,18 +181,16 @@ pub fn read(input: anytype, output: []u8) !?u32 {
         // checksum is calculated by summing the values of all hexadecimal digit pairs in
         // the record modulo 256 and taking the two's complement.
         const expected_checksum = try std.fmt.parseInt(u8, &try input.readBytesNoEof(2), 16);
-        Log.debug("Checksum: {}", .{expected_checksum});
+        Log.debug("Checksum: {X:0>2}", .{expected_checksum});
 
         // Take the Two's Complement
         checksum = @addWithOverflow(~checksum, 1)[0];
         if (checksum != expected_checksum) {
-            Log.err("Checksum failed: expected {x:0>2}, got {x:0>2}", .{ expected_checksum, checksum });
+            Log.err("Checksum failed: expected {X:0>2}, got {X:0>2}", .{ expected_checksum, checksum });
             return error.InvalidChecksum;
         }
 
-        if (record_type == .EOF) {
-            return start_address;
-        }
+        if (record_type == .EOF) return addresses;
     }
 }
 
@@ -294,7 +351,7 @@ test "data record two" {
     try std.testing.expectEqualSlices(u8, &DATA, &output);
 }
 
-test "start address" {
+test "start address linear" {
     const HEX =
         \\:04000005000000CD2A
         \\:00000001FF
@@ -302,7 +359,21 @@ test "start address" {
     var stream = std.io.fixedBufferStream(HEX);
     const reader = stream.reader();
 
-    const start_address = try read(reader, &[_]u8{});
-    try std.testing.expect(start_address != null);
-    try std.testing.expectEqual(0x000000CD, start_address.?);
+    const addresses = try read(reader, &[_]u8{});
+    try std.testing.expect(addresses.linear != null);
+    try std.testing.expectEqual(0x000000CD, addresses.linear.?);
+}
+
+test "start address segment" {
+    const HEX =
+        \\:0400000300003800C1
+        \\:00000001FF
+    ;
+    var stream = std.io.fixedBufferStream(HEX);
+    const reader = stream.reader();
+
+    const addresses = try read(reader, &[_]u8{});
+    try std.testing.expect(addresses.segment != null);
+    try std.testing.expectEqual(0x0000, addresses.segment.?.code_segment);
+    try std.testing.expectEqual(0x3800, addresses.segment.?.instruction_pointer);
 }
