@@ -547,9 +547,11 @@ test "JSR" {
     var t: TestCPU = .{};
     try t.test_op(.JSR_ABS);
 }
-test "RTI" {
+test "RTS" {
     var t: TestCPU = .{};
-    try t.test_op(.RTI);
+    // Make "space" on the stack to return (PC)
+    t.cpu.registers.stack_pointer -= 2;
+    try t.test_op(.RTS);
 }
 
 test "BCC" {
