@@ -26,8 +26,6 @@ const RecordType = enum(u8) {
 ///
 /// Hex file must end with an EOF record ":00000001FF"
 pub fn read(input: anytype, output: []u8) !void {
-    var buf: [128]u8 = undefined;
-
     while (true) {
         // : is the colon that starts every Intel HEX record.
         const colon = try input.readByte();
@@ -54,7 +52,7 @@ pub fn read(input: anytype, output: []u8) !void {
         // dd is a data field that represents one byte of data. A record may have
         // multiple data bytes. The number of data bytes in the record must match the
         // number specified by the ll field.
-        const data = buf[0..record_length];
+        const data = output[address .. address + record_length];
 
         if (record_length > 0) {
             if (address + record_length > output.len) {
@@ -62,20 +60,10 @@ pub fn read(input: anytype, output: []u8) !void {
                 return error.OutputTooSmall;
             }
 
-            const data_read = try input.readAtLeast(buf[0 .. record_length * 2], record_length * 2 - 1);
-            if (data_read == record_length * 2 - 1) {
-                Log.err("Length did not match the amount of bytes read", .{});
-                return error.InvalidLineLength;
-            }
-            const data_hex = buf[0..data_read];
-            Log.debug("Data hex: {s}", .{data_hex});
-
-            for (data, 0..data.len) |*d, i| {
-                d.* = try std.fmt.parseInt(u8, data_hex[i * 2 .. i * 2 + 2], 16);
+            for (data) |*d| {
+                d.* = try std.fmt.parseInt(u8, &try input.readBytesNoEof(2), 16);
             }
             Log.debug("Data: {X:0>2}\n", .{data});
-
-            @memcpy(output[address .. address + record_length], data);
         }
 
         const checksum_or_end_of_line = input.readBytesNoEof(2) catch |err| switch (err) {
