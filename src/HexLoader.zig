@@ -79,12 +79,21 @@ pub fn read(input: anytype, output: []u8) !Addresses {
             Log.err("Line did not start with ':', got '{any}'(0x{0X:0>2})", .{first_byte});
             return error.InvalidLineStart;
         }
+        var checksum: u8 = 0;
+
         // ll is the record-length field that represents the number of data bytes (dd) in the record.
         const record_length = try std.fmt.parseInt(u8, &try input.readBytesNoEof(2), 16);
         Log.debug("Record Length: 0x{X:0>2}({0any})", .{record_length});
+        checksum +%= record_length;
 
         // aaaa is the address field that represents the starting address for subsequent data in the record.
-        const address = try std.fmt.parseInt(u16, &try input.readBytesNoEof(4), 16);
+        const address_bytes: [2]u8 = .{
+            try std.fmt.parseInt(u8, &try input.readBytesNoEof(2), 16),
+            try std.fmt.parseInt(u8, &try input.readBytesNoEof(2), 16),
+        };
+        checksum +%= address_bytes[0];
+        checksum +%= address_bytes[1];
+        const address = std.mem.readInt(u16, &address_bytes, .big);
         Log.debug("Address: {X:0>4}", .{address});
         const effective_address: u32 = segment_address_offset + linear_address_offset + address;
         if (effective_address != address) {
@@ -98,10 +107,8 @@ pub fn read(input: anytype, output: []u8) !Addresses {
         }
         const record_type = try input.readEnum(RecordType, .big);
         Log.debug("Record Type: {s}", .{@tagName(record_type)});
-
-        var checksum: u8 = @intCast((record_length + address +
-            // Convert from ASCII digit to number
-            (@intFromEnum(record_type) - 0x30)) % 255);
+        // Convert from ASCII digit to number
+        checksum +%= (@intFromEnum(record_type) - 0x30);
 
         // dd is a data field that represents one byte of data. A record may have
         // multiple data bytes. The number of data bytes in the record must match the
