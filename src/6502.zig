@@ -391,7 +391,7 @@ pub fn reset(self: *Self) void {
 pub fn step(self: *Self) Op {
     const program_counter_before = self.registers.program_counter;
     const op: Op = @enumFromInt(self.next_program_u8());
-    Log.info("({: >9}) {x:0>4} {x:0>2}: {s:<8} {:.0} {:.0}", .{ self.cycles, program_counter_before + 1, self.memory[program_counter_before + 1 .. program_counter_before + 3], @tagName(op), self.registers, self.flags });
+    Log.info("({: >9}) {x:0>4} {x:0>2}: {s:<8} {:.0} {:.0}", .{ self.cycles, program_counter_before + 1, self.memory[program_counter_before + 2 .. program_counter_before + 4], @tagName(op), self.registers, self.flags });
     if (self.registers.stack_pointer < 0xFF) {
         StackLog.debug("{x:0>2}", .{self.memory[@as(u16, Self.STACK_START) + self.registers.stack_pointer + 1 .. Self.STACK_START + 0xFF + 1]});
     }
