@@ -29,12 +29,28 @@ pub fn main() !void {
     var cpu: CPU = .{};
     _ = try HexLoader.read(stream.reader(), &cpu.memory);
 
+    // Set platform subroutines to return
+    @memset(cpu.memory[0xe000..0xe05A], @intFromEnum(CPU.Op.RTS));
+
     cpu.reset();
     cpu.registers.program_counter = 0x0200 - 1;
 
-    var iteratons: u32 = 0;
-    while (true) : (iteratons += 1) {
-        if (iteratons > 0xFFFFFFFF) return .TooManyIterations;
+    while (true) {
         _ = cpu.step();
+
+        switch (cpu.registers.program_counter + 1) {
+            0xe00f => { // Puts
+                const address = cpu.get_current_stack_address() + 1;
+                // Get address of called from the stack
+                const start = std.mem.readInt(u16, @ptrCast(cpu.memory[address .. address + 2]), .little) + 1;
+                const end = std.mem.indexOf(u8, cpu.memory[start..], &[_]u8{0});
+
+                try std.io.getStdOut().writeAll(cpu.memory[start .. start + end.?]);
+
+                // Set return address past the string data
+                std.mem.writeInt(u16, @ptrCast(cpu.memory[address .. address + 2]), @intCast(start + end.?), .little);
+            },
+            else => {},
+        }
     }
 }

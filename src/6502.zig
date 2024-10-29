@@ -994,7 +994,7 @@ fn get_address(self: *Self, input: u16, mode: AddressingMode) u16 {
     return address;
 }
 
-fn get_current_stack_address(self: *Self) u16 {
+pub fn get_current_stack_address(self: *Self) u16 {
     return STACK_START + @as(u16, @intCast(self.registers.stack_pointer));
 }
 
