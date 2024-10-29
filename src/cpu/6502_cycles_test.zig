@@ -5,29 +5,30 @@ const Op = CPU.Op;
 const TestCPU = struct {
     cpu: CPU = .{},
     extra_cycles: u2 = 0,
-    params: [2]u8 = .{ 0x11, 0x11 },
 
-    const OP_ADDRESS = 0xBEEF;
+    const OP_ADDRESS = 0xAAAA;
 
-    fn set_page_break_params(self: *TestCPU) void {
-        self.set_op_param(0x0FFF);
+    fn set_registers_max(self: *TestCPU) void {
+        self.cpu.registers.accumulator = 0xFF;
+        self.cpu.registers.x = 0xFF;
+        self.cpu.registers.y = 0xFF;
     }
 
     fn set_op_param(self: *TestCPU, param: u16) void {
-        std.mem.writeInt(u16, self.cpu.memory[TestCPU.OP_ADDRESS + 1 .. TestCPU.OP_ADDRESS + 3], param, .little);
+        std.mem.writeInt(u16, self.cpu.memory[OP_ADDRESS + 1 .. OP_ADDRESS + 3], param, .little);
     }
 
     fn test_op(self: *TestCPU, op: CPU.Op) !void {
-        self.cpu.memory[TestCPU.OP_ADDRESS] = @intFromEnum(op);
+        self.cpu.memory[OP_ADDRESS] = @intFromEnum(op);
         self.cpu.cycles = 0;
-        self.cpu.registers.program_counter = TestCPU.OP_ADDRESS - 1;
+        self.cpu.registers.program_counter = OP_ADDRESS - 1;
 
-        std.log.debug("op: {s} ({x:0>2})\n", .{ @tagName(op), self.cpu.memory[TestCPU.OP_ADDRESS .. TestCPU.OP_ADDRESS + 3] });
+        std.log.debug("op: {s} ({x:0>2})\n", .{ @tagName(op), self.cpu.memory[OP_ADDRESS .. OP_ADDRESS + 3] });
 
         const executed_op = self.cpu.step();
         try std.testing.expectEqual(op, executed_op);
         std.testing.expectEqual(CYCLES[@intFromEnum(op)] + self.extra_cycles, self.cpu.cycles) catch {
-            std.log.err("{s} had incorrect cycles with bytes {x:0>2}\n", .{ @tagName(op), self.cpu.memory[TestCPU.OP_ADDRESS .. TestCPU.OP_ADDRESS + 3] });
+            std.log.err("{s} had incorrect cycles with bytes {x:0>2}\n", .{ @tagName(op), self.cpu.memory[OP_ADDRESS .. OP_ADDRESS + 3] });
             return error.IncorrectCycles;
         };
     }
@@ -358,7 +359,7 @@ test "LDA" {
 
     // (+1 if page crossed)
     t.extra_cycles = 1;
-    t.set_page_break_params();
+    t.set_registers_max();
     try t.test_op(.LDA_ABX);
     try t.test_op(.LDA_ABY);
     try t.test_op(.LDA_IDY);
@@ -374,7 +375,7 @@ test "LDX" {
 
     // (+1 if page crossed)
     t.extra_cycles = 1;
-    t.set_page_break_params();
+    t.set_registers_max();
     try t.test_op(.LDX_ABY);
 }
 
@@ -388,7 +389,7 @@ test "LDY" {
 
     // (+1 if page crossed)
     t.extra_cycles = 1;
-    t.set_page_break_params();
+    t.set_registers_max();
     try t.test_op(.LDY_ABX);
 }
 
@@ -458,7 +459,7 @@ test "AND" {
 
     // (+1 if page crossed)
     t.extra_cycles = 1;
-    t.set_page_break_params();
+    t.set_registers_max();
     try t.test_op(.AND_ABX);
     try t.test_op(.AND_ABY);
     try t.test_op(.AND_IDY);
@@ -476,7 +477,7 @@ test "EOR" {
 
     // (+1 if page crossed)
     t.extra_cycles = 1;
-    t.set_page_break_params();
+    t.set_registers_max();
     try t.test_op(.EOR_ABX);
     try t.test_op(.EOR_ABY);
     try t.test_op(.EOR_IDY);
@@ -494,7 +495,7 @@ test "ORA" {
 
     // (+1 if page crossed)
     t.extra_cycles = 1;
-    t.set_page_break_params();
+    t.set_registers_max();
     try t.test_op(.ORA_ABX);
     try t.test_op(.ORA_ABY);
     try t.test_op(.ORA_IDY);

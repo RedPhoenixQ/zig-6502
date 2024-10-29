@@ -951,14 +951,20 @@ fn get_address(self: *Self, input: u16, mode: AddressingMode) u16 {
         },
         .ABS => input,
         .ABX, .ABX_MAX_CYCLE => blk: {
+            const address = input +% self.registers.x;
             // +1 if page cross (if address + 1 goes into the next 256 byte area)
-            if (input & 0xFF == 0xFF or mode == .ABX_MAX_CYCLE) self.cycles +%= 1; // For high byte carry increment
-            break :blk input +% self.registers.x;
+            if (mode == .ABX_MAX_CYCLE or input & 0xFF00 != address & 0xFF00) {
+                self.cycles +%= 1;
+            }
+            break :blk address;
         },
         .ABY, .ABY_MAX_CYCLE => blk: {
+            const address = input +% self.registers.y;
             // +1 if page cross (if address + 1 goes into the next 256 byte area)
-            if (input & 0xFF == 0xFF or mode == .ABY_MAX_CYCLE) self.cycles +%= 1; // For high byte carry increment
-            break :blk input +% self.registers.y;
+            if (mode == .ABY_MAX_CYCLE or input & 0xFF00 != address & 0xFF00) {
+                self.cycles +%= 1;
+            }
+            break :blk address;
         },
         .IND => self.fetch_u16(input),
         .IDX => blk: {
@@ -970,11 +976,15 @@ fn get_address(self: *Self, input: u16, mode: AddressingMode) u16 {
         },
         // http://forum.6502.org/viewtopic.php?f=2&t=2195#p19862
         .IDY, .IDY_MAX_CYCLE => blk: {
-            // +1 if page cross (if address + 1 goes into the next 256 byte area)
-            if (input & 0xFF == 0xFF or mode == .IDY_MAX_CYCLE) self.cycles +%= 1; // For high byte carry increment
             const low: u16 = self.fetch_u8(input);
             const high: u16 = self.fetch_u8((input + 1) % 256);
-            break :blk (high << 8) + low + self.registers.y;
+            const raw_address = (high << 8) +% low;
+            const address = raw_address +% self.registers.y;
+            // +1 if page cross (if address + 1 goes into the next 256 byte area)
+            if (mode == .IDY_MAX_CYCLE or raw_address & 0xFF00 != address & 0xFF00) {
+                self.cycles +%= 1;
+            }
+            break :blk address;
             // break :blk self.fetch_u16(input) + self.registers.y;
         },
         .REL => blk: {
