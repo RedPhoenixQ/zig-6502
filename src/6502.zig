@@ -378,7 +378,7 @@ pub const Op = enum(u8) {
 
 registers: Registers = .{},
 flags: Flags = .{},
-memory: Memory = [_]u8{0} ** 0x10000,
+memory: Memory = [_]u8{0xFF} ** 0x10000,
 
 cycles: u32 = 0,
 
