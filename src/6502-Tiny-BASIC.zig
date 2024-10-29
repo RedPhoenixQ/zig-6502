@@ -1,7 +1,7 @@
 const std = @import("std");
 
-const CPU = @import("./6502.zig");
-const HexLoader = @import("./HexLoader.zig");
+const CPU = @import("./cpu/6502.zig");
+const HexLoader = @import("./loaders/HexLoader.zig");
 
 pub const std_options: std.Options = .{
     .log_level = .warn,

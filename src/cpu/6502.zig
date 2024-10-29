@@ -1038,6 +1038,10 @@ fn pop(self: *Self) u8 {
     return self.memory[self.get_current_stack_address()];
 }
 
+test {
+    std.testing.refAllDecls(@import("./6502_cycles_test.zig"));
+}
+
 test "functional test" {
     const CODE_START_ADDRESS = 0x0400;
     const SUCCESS_TRAP_ADDRESS = 0x336d;
