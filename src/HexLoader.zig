@@ -87,7 +87,9 @@ pub fn read(input: anytype, output: []u8) !Addresses {
         const address = try std.fmt.parseInt(u16, &try input.readBytesNoEof(4), 16);
         Log.debug("Address: {X:0>4}", .{address});
         const effective_address: u32 = segment_address_offset + linear_address_offset + address;
-        Log.debug("Effective address: {X:0>8}", .{effective_address});
+        if (effective_address != address) {
+            Log.debug("Effective address: {X:0>8}", .{effective_address});
+        }
 
         // tt is the field that represents the HEX record type
         if (try input.readByte() != '0') {
