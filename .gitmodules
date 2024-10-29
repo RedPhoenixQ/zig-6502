@@ -1,3 +1,6 @@
 [submodule "cc65"]
 	path = cc65
 	url = git@github.com:cc65/cc65.git
+[submodule "6502-Tiny-BASIC"]
+	path = 6502-Tiny-BASIC
+	url = git@github.com:CorshamTech/6502-Tiny-BASIC.git
