@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const CPU = @import("./6502.zig");
+const HexLoader = @import("./HexLoader.zig");
 
 pub const std_options: std.Options = .{
     .logFn = logFn,
@@ -14,7 +15,7 @@ fn logFn(
 ) void {
     switch (scope) {
         // Don't log zero page
-        CPU.ZeroPageScope => return,
+        CPU.ZeroPageScope, .hexLoader => return,
         // Don't log debug cpu logs (compare values, computed addresses, ...)
         CPU.LogScope => if (message_level == .debug) return,
         else => {},
@@ -23,18 +24,16 @@ fn logFn(
 }
 
 pub fn main() !void {
-    const CODE_START_ADDRESS = 0x0400;
-    const SUCCESS_TRAP_ADDRESS = 0x336d;
-    const BIN_START_ADDRESS = 0x000A;
-    const test_binary = @embedFile("./tests/6502_functional_test.bin");
+    const TINY_BASIC_HEX = @embedFile("./tests/tiny_basic.hex");
+    var stream = std.io.fixedBufferStream(TINY_BASIC_HEX);
     var cpu: CPU = .{};
-    @memcpy(cpu.memory[BIN_START_ADDRESS..], test_binary[0..]);
-    cpu.registers.program_counter = CODE_START_ADDRESS - 1;
+    _ = try HexLoader.read(stream.reader(), &cpu.memory);
 
-    std.log.info("{}{}", .{ cpu.registers, cpu.flags });
+    cpu.reset();
+    cpu.registers.program_counter = 0x0200 - 1;
 
     var iteratons: u32 = 0;
-    while (cpu.registers.program_counter + 1 != SUCCESS_TRAP_ADDRESS) : (iteratons += 1) {
+    while (true) : (iteratons += 1) {
         if (iteratons > 0xFFFFFFFF) return .TooManyIterations;
         _ = cpu.step();
     }
