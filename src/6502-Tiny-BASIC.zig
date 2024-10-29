@@ -25,7 +25,7 @@ fn logFn(
 }
 
 pub fn main() !void {
-    const TINY_BASIC_HEX = @embedFile("./tests/tiny_basic.hex");
+    const TINY_BASIC_HEX = @embedFile("./6502-Tiny-BASIC.hex");
     var stream = std.io.fixedBufferStream(TINY_BASIC_HEX);
     var cpu: CPU = .{};
     _ = try HexLoader.read(stream.reader(), &cpu.memory);
