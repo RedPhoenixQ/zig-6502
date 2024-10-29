@@ -336,7 +336,6 @@ test "Data" {
 }
 
 test "ExtendedSegmentAddress" {
-    std.testing.log_level = .debug;
     const HEX =
         \\:020000021200EA
         \\:100130003F0156702B5E712B722B732146013421C7
@@ -384,7 +383,6 @@ test "StartSegmentAddress" {
 }
 
 test "ExtendedLineraAddress" {
-    std.testing.log_level = .debug;
     const HEX =
         \\:020000040001F9
         \\:100130003F0156702B5E712B722B732146013421C7
