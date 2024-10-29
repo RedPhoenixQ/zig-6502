@@ -186,7 +186,7 @@ pub fn read(input: anytype, output: []u8) !Addresses {
                     addresses.linear = std.mem.readInt(u32, &data, .big);
                     Log.debug("Start Linear Address: {?X:0>8}\n", .{addresses.linear});
                 },
-                .EOF => addresses.eof = address,
+                .EOF => {},
             }
         }
 
@@ -203,7 +203,10 @@ pub fn read(input: anytype, output: []u8) !Addresses {
             return error.InvalidChecksum;
         }
 
-        if (record_type == .EOF) return addresses;
+        if (record_type == .EOF) {
+            addresses.eof = address;
+            return addresses;
+        }
     }
 }
 
