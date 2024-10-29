@@ -3,7 +3,7 @@ const CPU = @import("./6502.zig");
 const Op = CPU.Op;
 
 const TestCPU = struct {
-    cpu: CPU = .{},
+    cpu: CPU,
     extra_cycles: u2 = 0,
 
     const OP_ADDRESS = 0xAAAA;
@@ -347,7 +347,8 @@ const CYCLES = cycles_init();
 // };
 
 test "LDA" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.LDA_IMM);
     try t.test_op(.LDA_ZPG);
     try t.test_op(.LDA_ZPX);
@@ -366,7 +367,8 @@ test "LDA" {
 }
 
 test "LDX" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.LDX_IMM);
     try t.test_op(.LDX_ZPG);
     try t.test_op(.LDX_ZPY);
@@ -380,7 +382,8 @@ test "LDX" {
 }
 
 test "LDY" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.LDY_IMM);
     try t.test_op(.LDY_ZPG);
     try t.test_op(.LDY_ZPX);
@@ -394,7 +397,8 @@ test "LDY" {
 }
 
 test "STA" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.STA_ZPG);
     try t.test_op(.STA_ZPX);
     try t.test_op(.STA_ABS);
@@ -405,49 +409,60 @@ test "STA" {
 }
 
 test "TAX" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.TAX);
 }
 test "TAY" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.TAY);
 }
 test "TXA" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.TXA);
 }
 test "TYA" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.TYA);
 }
 
 test "TSX" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.TSX);
 }
 test "TXS" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.TXS);
 }
 test "PHA" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.PHA);
 }
 test "PHP" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.PHP);
 }
 test "PLA" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.PLA);
 }
 test "PLP" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.PLP);
 }
 
 test "AND" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.AND_IMM);
     try t.test_op(.AND_ZPG);
     try t.test_op(.AND_ZPX);
@@ -465,7 +480,8 @@ test "AND" {
     try t.test_op(.AND_IDY);
 }
 test "EOR" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.EOR_IMM);
     try t.test_op(.EOR_ZPG);
     try t.test_op(.EOR_ZPX);
@@ -483,7 +499,8 @@ test "EOR" {
     try t.test_op(.EOR_IDY);
 }
 test "ORA" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.ORA_IMM);
     try t.test_op(.ORA_ZPG);
     try t.test_op(.ORA_ZPX);
@@ -501,13 +518,15 @@ test "ORA" {
     try t.test_op(.ORA_IDY);
 }
 test "BIT" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.BIT_ZPG);
     try t.test_op(.BIT_ABS);
 }
 
 test "ASL" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.ASL);
     try t.test_op(.ASL_ZPG);
     try t.test_op(.ASL_ZPX);
@@ -515,7 +534,8 @@ test "ASL" {
     try t.test_op(.ASL_ABX);
 }
 test "LSR" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.LSR);
     try t.test_op(.LSR_ZPG);
     try t.test_op(.LSR_ZPX);
@@ -523,7 +543,8 @@ test "LSR" {
     try t.test_op(.LSR_ABX);
 }
 test "ROL" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.ROL);
     try t.test_op(.ROL_ZPG);
     try t.test_op(.ROL_ZPX);
@@ -531,7 +552,8 @@ test "ROL" {
     try t.test_op(.ROL_ABX);
 }
 test "ROR" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.ROR);
     try t.test_op(.ROR_ZPG);
     try t.test_op(.ROR_ZPX);
@@ -540,23 +562,27 @@ test "ROR" {
 }
 
 test "JMP" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.JMP_ABS);
     try t.test_op(.JMP_IND);
 }
 test "JSR" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.JSR_ABS);
 }
 test "RTS" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     // Make "space" on the stack to return (PC)
     t.cpu.registers.stack_pointer -= 2;
     try t.test_op(.RTS);
 }
 
 test "BCC" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     t.cpu.flags.carry = true;
     try t.test_op(.BCC_REL);
     // +1 if branch succeeds
@@ -569,7 +595,8 @@ test "BCC" {
     try t.test_op(.BCC_REL);
 }
 test "BCS" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     t.cpu.flags.carry = false;
     try t.test_op(.BCS_REL);
     // +1 if branch succeeds
@@ -582,7 +609,8 @@ test "BCS" {
     try t.test_op(.BCS_REL);
 }
 test "BEQ" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     t.cpu.flags.zero = false;
     try t.test_op(.BEQ_REL);
     // +1 if branch succeeds
@@ -595,7 +623,8 @@ test "BEQ" {
     try t.test_op(.BEQ_REL);
 }
 test "BMI" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     t.cpu.flags.negative = false;
     try t.test_op(.BMI_REL);
     // +1 if branch succeeds
@@ -608,7 +637,8 @@ test "BMI" {
     try t.test_op(.BMI_REL);
 }
 test "BNE" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     t.cpu.flags.zero = true;
     try t.test_op(.BNE_REL);
     // +1 if branch succeeds
@@ -621,7 +651,8 @@ test "BNE" {
     try t.test_op(.BNE_REL);
 }
 test "BPL" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     t.cpu.flags.negative = true;
     try t.test_op(.BPL_REL);
     // +1 if branch succeeds
@@ -634,7 +665,8 @@ test "BPL" {
     try t.test_op(.BPL_REL);
 }
 test "BVC" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     t.cpu.flags.overflow = true;
     try t.test_op(.BVC_REL);
     // +1 if branch succeeds
@@ -647,7 +679,8 @@ test "BVC" {
     try t.test_op(.BVC_REL);
 }
 test "BVS" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     t.cpu.flags.overflow = false;
     try t.test_op(.BVS_REL);
     // +1 if branch succeeds
@@ -661,44 +694,54 @@ test "BVS" {
 }
 
 test "CLC" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.CLC);
 }
 test "CLD" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.CLD);
 }
 test "CLI" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.CLI);
 }
 test "CLV" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.CLV);
 }
 test "SEC" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.SEC);
 }
 test "SED" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.SED);
 }
 test "SEI" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.SEI);
 }
 
 test "BRK" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.BRK);
 }
 test "NOP" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     try t.test_op(.NOP);
 }
 test "RTI" {
-    var t: TestCPU = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var t: TestCPU = .{ .cpu = .{ .memory = &memory } };
     // Make "space" on the stack to return (PC and Flags)
     t.cpu.registers.stack_pointer -= 3;
     try t.test_op(.RTI);

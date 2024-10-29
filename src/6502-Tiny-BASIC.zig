@@ -1,7 +1,7 @@
 const std = @import("std");
 
-const CPU = @import("./cpu/6502.zig");
-const HexLoader = @import("./loaders/HexLoader.zig");
+const CPU = @import("./6502.zig");
+const HexLoader = @import("./HexLoader.zig");
 
 pub const std_options: std.Options = .{
     .log_level = .warn,
@@ -27,8 +27,9 @@ fn logFn(
 pub fn main() !void {
     const TINY_BASIC_HEX = @embedFile("./6502-Tiny-BASIC.hex");
     var stream = std.io.fixedBufferStream(TINY_BASIC_HEX);
-    var cpu: CPU = .{};
-    _ = try HexLoader.read(stream.reader(), &cpu.memory);
+    var mem = [_]u8{0xFF} ** 0x10000;
+    _ = try HexLoader.read(stream.reader(), &mem);
+    var cpu = CPU.new(&mem);
 
     // Set platform subroutines to return
     @memset(cpu.memory[0xe000 .. 0xe057 + 2], @intFromEnum(CPU.Op.RTS));

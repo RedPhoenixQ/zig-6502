@@ -123,7 +123,11 @@ pub const POWER_ON_RESET_ADDRESS = 0xFFFC;
 /// Two bytes long (0xFFFE/F)
 pub const BRK_INTERUPT_HANDLER_ADDRESS = 0xFFFE;
 
-pub const Memory = [0x10000]u8;
+pub const Memory = struct {
+    pub const T = []u8;
+    pub const MIN_SIZE = 0x0200;
+    pub const DEFAULT_SIZE = 0x10000;
+};
 
 pub const AddressingMode = enum(u4) {
     ZPG,
@@ -378,9 +382,17 @@ pub const Op = enum(u8) {
 
 registers: Registers = .{},
 flags: Flags = .{},
-memory: Memory = [_]u8{0xFF} ** 0x10000,
+/// Must be atleast 0x0200 to fit hard coded stack operations
+memory: Memory.T,
 
 cycles: u32 = 0,
+
+pub fn new(memory: Memory.T) Self {
+    std.debug.assert(memory.len >= Memory.MIN_SIZE);
+    return .{
+        .memory = memory,
+    };
+}
 
 pub fn reset(self: *Self) void {
     self.flags = .{};
@@ -1057,7 +1069,8 @@ test "functional test" {
     const SUCCESS_TRAP_ADDRESS = 0x336d;
     const BIN_START_ADDRESS = 0x000A;
     const test_binary = @embedFile("./tests/6502_functional_test.bin");
-    var cpu: Self = .{};
+    var memory = [_]u8{0xFF} ** 0x10000;
+    var cpu = Self.new(&memory);
     @memcpy(cpu.memory[BIN_START_ADDRESS..], test_binary[0..]);
     cpu.registers.program_counter = CODE_START_ADDRESS - 1;
 
