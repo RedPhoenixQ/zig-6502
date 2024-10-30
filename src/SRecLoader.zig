@@ -23,12 +23,15 @@ const Kind = enum(u8) {
     }
 };
 
-pub fn read(reader: anytype, output: []u8) !void {
+pub fn read(reader: anytype, output: []u8) !?u32 {
     var data_records_seen: u16 = 0;
     var header_buf = [_]u8{0} ** 0xFF;
     while (true) {
         const first_byte = while (true) {
-            const byte = try reader.readByte();
+            const byte = reader.readByte() catch |err| switch (err) {
+                error.EndOfStream => return null,
+                else => return err,
+            };
             // Consume whitespace
             if (!std.ascii.isWhitespace(byte)) break byte;
         };
@@ -88,7 +91,7 @@ pub fn read(reader: anytype, output: []u8) !void {
             },
             .Data16, .Data24, .Data32 => data_records_seen += 1,
             .Header => Log.info("Header: {s}", .{data}),
-            .Terminator16, .Terminator24, .Terminator32 => return,
+            .Terminator16, .Terminator24, .Terminator32 => return address,
         }
     }
 }
@@ -111,6 +114,8 @@ test read {
     var stream = std.io.fixedBufferStream(SREC);
     const reader = stream.reader();
 
-    try read(reader, output[0..]);
+    const address = try read(reader, output[0..]);
     try std.testing.expectEqualSlices(u8, &DATA, &output);
+    try std.testing.expect(address != null);
+    try std.testing.expectEqual(u8, 0x0000, address.?);
 }
