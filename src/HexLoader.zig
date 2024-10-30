@@ -220,81 +220,13 @@ test read {
         \\:04003F00A42EFE22CB
         \\:00000001FF
     ;
-    var DATA = [_]u8{0} ** 0xFF;
-    @memcpy(DATA[0x0013 .. 0x0013 + 0x10], &[0x10]u8{
-        0xAC,
-        0x12,
-        0xAD,
-        0x13,
-        0xAE,
-        0x10,
-        0xAF,
-        0x11,
-        0x12,
-        0x00,
-        0x2F,
-        0x8E,
-        0x0E,
-        0x8F,
-        0x0F,
-        0x22,
-    });
-    @memcpy(DATA[0x0003 .. 0x0003 + 0x10], &[0x10]u8{
-        0xE5,
-        0x0B,
-        0x25,
-        0x0D,
-        0xF5,
-        0x09,
-        0xE5,
-        0x0A,
-        0x35,
-        0x0C,
-        0xF5,
-        0x08,
-        0x12,
-        0x00,
-        0x13,
-        0x22,
-    });
-    @memcpy(DATA[0x0000 .. 0x0000 + 0x03], &[0x03]u8{
-        0x02, 0x00, 0x23,
-    });
-    @memcpy(DATA[0x0023 .. 0x0023 + 0x0C], &[0x0C]u8{
-        0x78,
-        0x7F,
-        0xE4,
-        0xF6,
-        0xD8,
-        0xFD,
-        0x75,
-        0x81,
-        0x13,
-        0x02,
-        0x00,
-        0x03,
-    });
-    @memcpy(DATA[0x002F .. 0x002F + 0x10], &[0x10]u8{
-        0xEF,
-        0xF8,
-        0x8D,
-        0xF0,
-        0xA4,
-        0xFF,
-        0xED,
-        0xC5,
-        0xF0,
-        0xCE,
-        0xA4,
-        0x2E,
-        0xFE,
-        0xEC,
-        0x88,
-        0xF0,
-    });
-    @memcpy(DATA[0x003F .. 0x003F + 0x04], &[0x04]u8{
-        0xA4, 0x2E, 0xFE, 0x22,
-    });
+    var DATA = [_]u8{0} ** 0x100;
+    _ = try std.fmt.hexToBytes(DATA[0x0013..], "AC12AD13AE10AF1112002F8E0E8F0F22");
+    _ = try std.fmt.hexToBytes(DATA[0x0003..], "E50B250DF509E50A350CF50812001322");
+    _ = try std.fmt.hexToBytes(DATA[0x0000..], "020023");
+    _ = try std.fmt.hexToBytes(DATA[0x0023..], "787FE4F6D8FD758113020003");
+    _ = try std.fmt.hexToBytes(DATA[0x002F..], "EFF88DF0A4FFEDC5F0CEA42EFEEC88F0");
+    _ = try std.fmt.hexToBytes(DATA[0x003F..], "A42EFE22");
     var output = [_]u8{0} ** DATA.len;
     var stream = std.io.fixedBufferStream(HEX);
     const reader = stream.reader();
@@ -309,24 +241,7 @@ test "Data" {
         \\:00000001FF
     ;
     var DATA = [_]u8{0} ** (0x2462 + 0x10);
-    @memcpy(DATA[0x2462 .. 0x2462 + 0x10], &[0x10]u8{
-        0x46,
-        0x4C,
-        0x55,
-        0x49,
-        0x44,
-        0x20,
-        0x50,
-        0x52,
-        0x4F,
-        0x46,
-        0x49,
-        0x4C,
-        0x45,
-        0x00,
-        0x46,
-        0x4C,
-    });
+    _ = try std.fmt.hexToBytes(DATA[0x2462..], "464C5549442050524F46494C4500464C");
     var output = [_]u8{0} ** DATA.len;
     var stream = std.io.fixedBufferStream(HEX);
     const reader = stream.reader();
@@ -341,25 +256,9 @@ test "ExtendedSegmentAddress" {
         \\:100130003F0156702B5E712B722B732146013421C7
         \\:00000001FF
     ;
-    var DATA = [_]u8{0} ** ((0x1200 * 16) + 0x0130 + 0x10);
-    @memcpy(DATA[(0x1200 * 16) + 0x0130 .. (0x1200 * 16) + 0x0130 + 0x10], &[0x10]u8{
-        0x3F,
-        0x01,
-        0x56,
-        0x70,
-        0x2B,
-        0x5E,
-        0x71,
-        0x2B,
-        0x72,
-        0x2B,
-        0x73,
-        0x21,
-        0x46,
-        0x01,
-        0x34,
-        0x21,
-    });
+    const ADDRESS = (0x1200 * 16) + 0x0130;
+    var DATA = [_]u8{0} ** (ADDRESS + 0x10);
+    _ = try std.fmt.hexToBytes(DATA[ADDRESS..], "3F0156702B5E712B722B732146013421");
     var output = [_]u8{0} ** DATA.len;
     var stream = std.io.fixedBufferStream(HEX);
     const reader = stream.reader();
@@ -389,25 +288,9 @@ test "ExtendedLineraAddress" {
         \\:00000001FF
     ;
     // Uses ~65KiB of memory
-    var DATA = [_]u8{0} ** ((0x0001 << 16) + 0x0130 + 0x10);
-    @memcpy(DATA[(0x0001 << 16) + 0x0130 .. (0x0001 << 16) + 0x0130 + 0x10], &[0x10]u8{
-        0x3F,
-        0x01,
-        0x56,
-        0x70,
-        0x2B,
-        0x5E,
-        0x71,
-        0x2B,
-        0x72,
-        0x2B,
-        0x73,
-        0x21,
-        0x46,
-        0x01,
-        0x34,
-        0x21,
-    });
+    const ADDRESS = (0x0001 << 16) + 0x0130;
+    var DATA = [_]u8{0} ** (ADDRESS + 0x10);
+    _ = try std.fmt.hexToBytes(DATA[ADDRESS..], "3F0156702B5E712B722B732146013421");
     var output = [_]u8{0} ** DATA.len;
     var stream = std.io.fixedBufferStream(HEX);
     const reader = stream.reader();
