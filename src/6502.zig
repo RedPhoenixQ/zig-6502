@@ -151,7 +151,7 @@ pub const AddressingMode = enum(u4) {
 /// The second part is the addressing mode: https://www.6502.org/users/obelisk/6502/addressing.html
 pub const Op = enum(u8) {
     // Load/Store Operations
-    /// Load Accumulator	N,Z
+    /// Load Accumulator N,Z
     LDA_IMM = 0xA9,
     LDA_ZPG = 0xA5,
     LDA_ZPX = 0xB5,
@@ -160,13 +160,13 @@ pub const Op = enum(u8) {
     LDA_ABY = 0xB9,
     LDA_IDX = 0xA1,
     LDA_IDY = 0xB1,
-    /// Load X Register	N,Z
+    /// Load X Register N,Z
     LDX_IMM = 0xA2,
     LDX_ZPG = 0xA6,
     LDX_ZPY = 0xB6,
     LDX_ABS = 0xAE,
     LDX_ABY = 0xBE,
-    /// Load Y Register	N,Z
+    /// Load Y Register N,Z
     LDY_IMM = 0xA0,
     LDY_ZPG = 0xA4,
     LDY_ZPX = 0xB4,
@@ -190,17 +190,17 @@ pub const Op = enum(u8) {
     STY_ABS = 0x8C,
 
     // Register Transfers
-    /// Transfer accumulator to X	N,Z
+    /// Transfer accumulator to X N,Z
     TAX = 0xAA,
-    /// Transfer accumulator to Y	N,Z
+    /// Transfer accumulator to Y N,Z
     TAY = 0xA8,
-    /// Transfer X to accumulator	N,Z
+    /// Transfer X to accumulator N,Z
     TXA = 0x8A,
-    /// Transfer Y to accumulator	N,Z
+    /// Transfer Y to accumulator N,Z
     TYA = 0x98,
 
     // Stack Operations
-    /// Transfer stack pointer to X	N,Z
+    /// Transfer stack pointer to X N,Z
     TSX = 0xBA,
     /// Transfer X to stack pointer
     TXS = 0x9A,
@@ -208,13 +208,13 @@ pub const Op = enum(u8) {
     PHA = 0x48,
     /// Push processor status on stack
     PHP = 0x08,
-    /// Pull accumulator from stack	N,Z
+    /// Pull accumulator from stack N,Z
     PLA = 0x68,
-    /// Pull processor status from stack	All
+    /// Pull processor status from stack All
     PLP = 0x28,
 
     // Logical
-    /// Logical AND	N,Z
+    /// Logical AND N,Z
     AND_IMM = 0x29,
     AND_ZPG = 0x25,
     AND_ZPX = 0x35,
@@ -223,7 +223,7 @@ pub const Op = enum(u8) {
     AND_ABY = 0x39,
     AND_IDX = 0x21,
     AND_IDY = 0x31,
-    /// Exclusive OR	N,Z
+    /// Exclusive OR N,Z
     EOR_IMM = 0x49,
     EOR_ZPG = 0x45,
     EOR_ZPX = 0x55,
@@ -232,7 +232,7 @@ pub const Op = enum(u8) {
     EOR_ABY = 0x59,
     EOR_IDX = 0x41,
     EOR_IDY = 0x51,
-    /// Logical Inclusive OR	N,Z
+    /// Logical Inclusive OR N,Z
     ORA_IMM = 0x09,
     ORA_ZPG = 0x05,
     ORA_ZPX = 0x15,
@@ -241,12 +241,12 @@ pub const Op = enum(u8) {
     ORA_ABY = 0x19,
     ORA_IDX = 0x01,
     ORA_IDY = 0x11,
-    /// Bit Test	N,V,Z
+    /// Bit Test N,V,Z
     BIT_ZPG = 0x24,
     BIT_ABS = 0x2C,
 
     // Arithmetic
-    /// Add with Carry	N,V,Z,C
+    /// Add with Carry N,V,Z,C
     ADC_IMM = 0x69,
     ADC_ZPG = 0x65,
     ADC_ZPX = 0x75,
@@ -255,7 +255,7 @@ pub const Op = enum(u8) {
     ADC_ABY = 0x79,
     ADC_IDX = 0x61,
     ADC_IDY = 0x71,
-    /// Subtract with Carry	N,V,Z,C
+    /// Subtract with Carry N,V,Z,C
     SBC_IMM = 0xE9,
     SBC_ZPG = 0xE5,
     SBC_ZPX = 0xF5,
@@ -264,7 +264,7 @@ pub const Op = enum(u8) {
     SBC_ABY = 0xF9,
     SBC_IDX = 0xE1,
     SBC_IDY = 0xF1,
-    /// Compare accumulator	N,Z,C
+    /// Compare accumulator N,Z,C
     CMP_IMM = 0xC9,
     CMP_ZPG = 0xC5,
     CMP_ZPX = 0xD5,
@@ -273,55 +273,55 @@ pub const Op = enum(u8) {
     CMP_ABY = 0xD9,
     CMP_IDX = 0xC1,
     CMP_IDY = 0xD1,
-    /// Compare X register	N,Z,C
+    /// Compare X register N,Z,C
     CPX_IMM = 0xE0,
     CPX_ZPG = 0xE4,
     CPX_ABS = 0xEC,
-    /// Compare Y register	N,Z,C
+    /// Compare Y register N,Z,C
     CPY_IMM = 0xC0,
     CPY_ZPG = 0xC4,
     CPY_ABS = 0xCC,
 
     // Increments & Decrements
-    /// Increment a memory location	N,Z
+    /// Increment a memory location N,Z
     INC_ZPG = 0xE6,
     INC_ZPX = 0xF6,
     INC_ABS = 0xEE,
     INC_ABX = 0xFE,
-    /// Increment the X register	N,Z
+    /// Increment the X register N,Z
     INX = 0xE8,
-    /// Increment the Y register	N,Z
+    /// Increment the Y register N,Z
     INY = 0xC8,
-    /// Decrement a memory location	N,Z
+    /// Decrement a memory location N,Z
     DEC_ZPG = 0xC6,
     DEC_ZPX = 0xD6,
     DEC_ABS = 0xCE,
     DEC_ABX = 0xDE,
-    /// Decrement the X register	N,Z
+    /// Decrement the X register N,Z
     DEX = 0xCA,
-    /// Decrement the Y register	N,Z
+    /// Decrement the Y register N,Z
     DEY = 0x88,
 
     // Shifts
-    /// Arithmetic Shift Left	N,Z,C
+    /// Arithmetic Shift Left N,Z,C
     ASL = 0x0A,
     ASL_ZPG = 0x06,
     ASL_ZPX = 0x16,
     ASL_ABS = 0x0E,
     ASL_ABX = 0x1E,
-    /// Logical Shift Right	N,Z,C
+    /// Logical Shift Right N,Z,C
     LSR = 0x4A,
     LSR_ZPG = 0x46,
     LSR_ZPX = 0x56,
     LSR_ABS = 0x4E,
     LSR_ABX = 0x5E,
-    /// Rotate Left	N,Z,C
+    /// Rotate Left N,Z,C
     ROL = 0x2A,
     ROL_ZPG = 0x26,
     ROL_ZPX = 0x36,
     ROL_ABS = 0x2E,
     ROL_ABX = 0x3E,
-    /// Rotate Right	N,Z,C
+    /// Rotate Right N,Z,C
     ROR = 0x6A,
     ROR_ZPG = 0x66,
     ROR_ZPX = 0x76,
@@ -356,27 +356,27 @@ pub const Op = enum(u8) {
     BVS_REL = 0x70,
 
     // Status Flag Changes
-    /// Clear carry flag	C
+    /// Clear carry flag C
     CLC = 0x18,
-    /// Clear decimal mode flag	D
+    /// Clear decimal mode flag D
     CLD = 0xD8,
-    /// Clear interrupt disable flag	I
+    /// Clear interrupt disable flag I
     CLI = 0x58,
-    /// Clear overflow flag	V
+    /// Clear overflow flag V
     CLV = 0xB8,
-    /// Set carry flag	C
+    /// Set carry flag C
     SEC = 0x38,
-    /// Set decimal mode flag	D
+    /// Set decimal mode flag D
     SED = 0xF8,
-    /// Set interrupt disable flag	I
+    /// Set interrupt disable flag I
     SEI = 0x78,
 
     // System Functions
-    /// Force an interrupt	B
+    /// Force an interrupt B
     BRK = 0x00,
     /// No Operation
     NOP = 0xEA,
-    /// Return from Interrupt	All
+    /// Return from Interrupt All
     RTI = 0x40,
 };
 
