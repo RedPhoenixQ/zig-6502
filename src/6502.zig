@@ -149,6 +149,7 @@ pub const AddressingMode = enum(u4) {
 };
 
 /// The second part is the addressing mode: https://www.6502.org/users/obelisk/6502/addressing.html
+/// https://www.masswerk.at/6502/6502_instruction_set.html
 pub const Op = enum(u8) {
     // Load/Store Operations
     /// Load Accumulator N,Z
@@ -378,6 +379,8 @@ pub const Op = enum(u8) {
     NOP = 0xEA,
     /// Return from Interrupt All
     RTI = 0x40,
+
+    _, // Invalid op code
 };
 
 registers: Registers = .{},
@@ -468,7 +471,7 @@ pub fn step(self: *Self) Op {
 
         .STX_ZPG, .STX_ZPY, .STX_ABS => self.store(self.registers.x, self.get_instruction_address(switch (op) {
             .STX_ZPG => .ZPG,
-            .STX_ZPX => .ZPX,
+            .STX_ZPY => .ZPY,
             .STX_ABS => .ABS,
             else => unreachable,
         })),
@@ -882,6 +885,8 @@ pub fn step(self: *Self) Op {
             // Remove one so that the next step with increment to the specified address
             self.registers.program_counter -%= 1;
         },
+
+        _ => std.debug.panic("Attempted to run invalid op code {x:0>2}", .{@intFromEnum(op)}),
     }
 
     if (self.registers.program_counter == program_counter_before) {
