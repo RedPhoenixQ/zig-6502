@@ -158,6 +158,10 @@ pub const AddressingMode = enum(u4) {
 
 /// The second part is the addressing mode: https://www.6502.org/users/obelisk/6502/addressing.html
 /// https://www.masswerk.at/6502/6502_instruction_set.html
+///
+/// Does not include the illegal opcodes, see https://www.masswerk.at/6502/6502_instruction_set.html
+///
+/// TODO: Could be extended with 65C02 instructions
 pub const Op = enum(u8) {
     // Load/Store Operations
     /// Load Accumulator N,Z
@@ -1006,6 +1010,8 @@ pub fn CPU(MemoryMap: anytype) type {
         }
 
         /// https://www.nesdev.org/wiki/CPU_addressing_modes
+        ///
+        /// Increments cycles if a page boundary would be crossed
         fn get_address(self: *Self, input: u16, mode: AddressingMode) u16 {
             const address = switch (mode) {
                 .ZPG => input,
