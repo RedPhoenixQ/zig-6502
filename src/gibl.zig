@@ -32,17 +32,17 @@ pub fn main() !void {
     const MON = @embedFile("./gibl-sxb/mon.srec");
     const RAM = @embedFile("./gibl-sxb/ram.srec");
     const ROM = @embedFile("./gibl-sxb/rom.srec");
-    var mem = [_]u8{0xFF} ** 0x10000;
+    var mem = CPU.BufferMemoryMap{};
     var stream = std.io.fixedBufferStream(MON);
-    _ = try SRecLoader.read(stream.reader(), &mem);
+    _ = try SRecLoader.read(stream.reader(), &mem.buffer);
     stream = std.io.fixedBufferStream(RAM);
-    _ = try SRecLoader.read(stream.reader(), &mem);
+    _ = try SRecLoader.read(stream.reader(), &mem.buffer);
     stream = std.io.fixedBufferStream(ROM);
-    _ = try SRecLoader.read(stream.reader(), &mem);
-    var cpu = CPU.new(&mem);
+    _ = try SRecLoader.read(stream.reader(), &mem.buffer);
+    var cpu = CPU.CPU(CPU.BufferMemoryMap).init(&mem);
 
     for ([_]u16{ READ_CHAR, WRITE_CHAR }) |address| {
-        mem[address] = @intFromEnum(CPU.Op.RTS);
+        mem.buffer[address] = @intFromEnum(CPU.Op.RTS);
     }
 
     cpu.reset();

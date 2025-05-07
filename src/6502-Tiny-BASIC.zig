@@ -27,13 +27,13 @@ fn logFn(
 pub fn main() !void {
     const TINY_BASIC_HEX = @embedFile("./6502-Tiny-BASIC.hex");
     var stream = std.io.fixedBufferStream(TINY_BASIC_HEX);
-    var mem = [_]u8{0xFF} ** 0x10000;
-    _ = try HexLoader.read(stream.reader(), &mem);
-    var cpu = CPU.new(&mem);
+    var mem = CPU.BufferMemoryMap{};
+    _ = try HexLoader.read(stream.reader(), &mem.buffer);
+    var cpu = CPU.CPU(CPU.BufferMemoryMap).init(&mem);
 
     // Set platform subroutines to return
-    @memset(cpu.memory[0xe000 .. 0xe057 + 2], @intFromEnum(CPU.Op.RTS));
-    @memset(cpu.memory[0x0206 .. 0x0212 + 2], @intFromEnum(CPU.Op.RTS));
+    @memset(cpu.memory.buffer[0xe000 .. 0xe057 + 2], @intFromEnum(CPU.Op.RTS));
+    @memset(cpu.memory.buffer[0x0206 .. 0x0212 + 2], @intFromEnum(CPU.Op.RTS));
 
     cpu.reset();
     cpu.registers.program_counter = 0x0200 - 1;
@@ -45,13 +45,13 @@ pub fn main() !void {
             0xe00f => { // Puts
                 const address = cpu.get_current_stack_address() + 1;
                 // Get address of called from the stack
-                const start = std.mem.readInt(u16, @ptrCast(cpu.memory[address .. address + 2]), .little) + 1;
-                const end = std.mem.indexOf(u8, cpu.memory[start..], &[_]u8{0});
+                const start = std.mem.readInt(u16, @ptrCast(cpu.memory.buffer[address .. address + 2]), .little) + 1;
+                const end = std.mem.indexOf(u8, cpu.memory.buffer[start..], &[_]u8{0});
 
-                try std.io.getStdOut().writeAll(cpu.memory[start .. start + end.?]);
+                try std.io.getStdOut().writeAll(cpu.memory.buffer[start .. start + end.?]);
 
                 // Set return address past the string data
-                std.mem.writeInt(u16, @ptrCast(cpu.memory[address .. address + 2]), @intCast(start + end.?), .little);
+                std.mem.writeInt(u16, @ptrCast(cpu.memory.buffer[address .. address + 2]), @intCast(start + end.?), .little);
             },
             0x0206 => { // OUTCH output char in A
                 const bytes_written = try std.io.getStdOut().write(&[_]u8{cpu.registers.accumulator});
