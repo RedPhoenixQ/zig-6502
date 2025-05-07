@@ -455,21 +455,29 @@ pub fn step(self: *Self) Op {
             else => unreachable,
         })),
 
-        .STA_ZPG => self.store(self.registers.accumulator, self.get_instruction_address(.ZPG)),
-        .STA_ZPX => self.store(self.registers.accumulator, self.get_instruction_address(.ZPX)),
-        .STA_ABS => self.store(self.registers.accumulator, self.get_instruction_address(.ABS)),
-        .STA_ABX => self.store(self.registers.accumulator, self.get_instruction_address(.ABX_MAX_CYCLE)),
-        .STA_ABY => self.store(self.registers.accumulator, self.get_instruction_address(.ABY_MAX_CYCLE)),
-        .STA_IDX => self.store(self.registers.accumulator, self.get_instruction_address(.IDX)),
-        .STA_IDY => self.store(self.registers.accumulator, self.get_instruction_address(.IDY_MAX_CYCLE)),
+        .STA_ZPG, .STA_ZPX, .STA_ABS, .STA_ABX, .STA_ABY, .STA_IDX, .STA_IDY => self.store(self.registers.accumulator, self.get_instruction_address(switch (op) {
+            .STA_ZPG => .ZPG,
+            .STA_ZPX => .ZPX,
+            .STA_ABS => .ABS,
+            .STA_ABX => .ABX_MAX_CYCLE,
+            .STA_ABY => .ABY_MAX_CYCLE,
+            .STA_IDX => .IDX,
+            .STA_IDY => .IDY_MAX_CYCLE,
+            else => unreachable,
+        })),
 
-        .STX_ZPG => self.store(self.registers.x, self.get_instruction_address(.ZPG)),
-        .STX_ZPY => self.store(self.registers.x, self.get_instruction_address(.ZPY)),
-        .STX_ABS => self.store(self.registers.x, self.get_instruction_address(.ABS)),
-
-        .STY_ZPG => self.store(self.registers.y, self.get_instruction_address(.ZPG)),
-        .STY_ZPX => self.store(self.registers.y, self.get_instruction_address(.ZPX)),
-        .STY_ABS => self.store(self.registers.y, self.get_instruction_address(.ABS)),
+        .STX_ZPG, .STX_ZPY, .STX_ABS => self.store(self.registers.x, self.get_instruction_address(switch (op) {
+            .STX_ZPG => .ZPG,
+            .STX_ZPX => .ZPX,
+            .STX_ABS => .ABS,
+            else => unreachable,
+        })),
+        .STY_ZPG, .STY_ZPX, .STY_ABS => self.store(self.registers.y, self.get_instruction_address(switch (op) {
+            .STY_ZPG => .ZPG,
+            .STY_ZPX => .ZPX,
+            .STY_ABS => .ABS,
+            else => unreachable,
+        })),
 
         .TAX => {
             self.cycles +%= 1;
