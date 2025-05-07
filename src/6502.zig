@@ -416,10 +416,11 @@ pub fn CPU(MemoryMap: anytype) type {
             };
         }
 
+        /// https://www.masswerk.at/6502/6502_instruction_set.html:~:text=Start/Reset%20Operations
         pub fn reset(self: *Self) void {
             self.flags = .{};
             self.registers.program_counter = self.fetch_u16(POWER_ON_RESET_ADDRESS);
-            self.cycles = 0;
+            self.cycles = 8;
         }
 
         pub fn step(self: *Self) Op {
